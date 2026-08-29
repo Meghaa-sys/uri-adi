@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <title>MĀYĀLI — Real Uri Adi VR Festival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta name="description" content="Skill-based Uri Adi pot hitting simulation with eye-level pot swinging, desktop gaze raycasting, Quest 3 6DoF VR controller physics, ceramic cracking, and particle shatter victory!" />
+<meta name="description" content="Skill-based Uri Adi pot hitting simulation with keyboard spacebar/enter controls, eye-level pot swinging, desktop gaze raycasting, Quest 3 6DoF VR controller physics, ceramic cracking, and particle shatter victory!" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
 <script>
@@ -15,7 +15,7 @@
     stickGrabbed: true,
     hitsRequired: 3,
     hitsCurrent: 0,
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.65 },
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.70 },
     endChallenge: function () {}
   };
 
@@ -344,6 +344,10 @@
     max-width: 480px; line-height: 1.5;
   }
   .instructions-card ul { margin: 6px 0 0 0; padding-left: 20px; }
+  .key-badge {
+    background: rgba(201, 162, 39, 0.25); border: 1px solid #C9A227;
+    padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #FFF;
+  }
 </style>
 </head>
 <body>
@@ -354,11 +358,11 @@
   <p>Step directly into the festival arena! Land <strong>3 solid strikes</strong> on the swinging pot to smash it open!</p>
 
   <div class="instructions-card">
-    🏏 <strong>Multi-Strike Challenge Rules:</strong>
+    🏏 <strong>Strike Controls:</strong>
     <ul>
-      <li>Strike the swinging pot <strong>3 times</strong> to shatter it!</li>
-      <li><strong>Desktop/Mobile:</strong> Click/tap anywhere while aiming reticle at the pot!</li>
-      <li><strong>Meta Quest 3:</strong> Swing physical VR controller to strike repeatedly.</li>
+      <li><strong>Keyboard:</strong> Press <span class="key-badge">Spacebar</span>, <span class="key-badge">Enter</span>, <span class="key-badge">X</span>, or <span class="key-badge">F</span> to strike!</li>
+      <li><strong>Mouse/Touch:</strong> Click or tap anywhere while aiming at the pot.</li>
+      <li><strong>Meta Quest 3 VR:</strong> Swing physical 6DoF VR controller.</li>
     </ul>
   </div>
 
@@ -440,7 +444,7 @@
     <a-sphere position="-0.32 -0.05 -0.1" radius="0.07" color="#F4E9CF"></a-sphere>
   </a-entity>
 
-  <a-text id="worldMessage" value="⚡ Aim Reticle at Pot & Click to Strike!" align="center" color="#F4E9CF" width="5.5"
+  <a-text id="worldMessage" value="⚡ Press SPACEBAR, ENTER, or Click to Strike!" align="center" color="#F4E9CF" width="5.5"
           position="0 2.7 -1.9" visible="true"></a-text>
 
   <a-entity id="rig" position="0 0 1.2">
@@ -528,7 +532,7 @@
     timerLabel.textContent = timeLeft;
     window.MAYALI.timerActive = true;
     timerHandle = setInterval(tickTimer, 1000);
-    showMessage('Uri Adi! Aim & Click to Strike!', 2000);
+    showMessage('Uri Adi! Press Space/Enter or Click!', 2200);
   }
 
   function stopSwingAnimations() {
@@ -586,14 +590,13 @@
     }
   });
 
-  // DESKTOP & MOBILE CLICK STRIKE WITH DYNAMIC GAZE RAYCASTING
-  document.querySelector('a-scene').addEventListener('click', () => {
+  // UNIFIED STRIKE ACTION (CLICK, TOUCH, OR KEYBOARD PRESS)
+  function performStrike() {
     if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
     SoundFX.playSwing();
 
     const rightHand = document.querySelector('#rightHand');
 
-    // Strike animation: thrust stick directly towards pot height (Y = 1.7m - 1.9m)
     rightHand.setAttribute('animation__strike', {
       property: 'position', to: '0 1.65 -1.6', dur: 120, dir: 'alternate', loop: 1
     });
@@ -616,7 +619,6 @@
       const distanceTip = tipW.distanceTo(potW);
       const minDist = Math.min(distanceCenter, distanceTip);
 
-      // Check Cursor Raycaster Gaze Intersection
       const cursorEl = document.querySelector('#mainCursor');
       const raycaster = cursorEl ? cursorEl.components.raycaster : null;
       const intersectedEls = raycaster ? raycaster.intersectedEls : [];
@@ -632,7 +634,29 @@
         }
       }
     }, 110);
+  }
+
+  // Mouse & Touch Screen Click
+  document.querySelector('a-scene').addEventListener('click', performStrike);
+
+  // Keyboard Event Listener (Spacebar, Enter, X, F, ArrowUp)
+  window.addEventListener('keydown', (e) => {
+    // Prevent triggering if overlay start modal is open
+    if (!window.MAYALI.timerActive || window.MAYALI.resolved) return;
+
+    if (
+      e.code === 'Space' ||
+      e.code === 'Enter' ||
+      e.code === 'KeyX' ||
+      e.code === 'KeyF' ||
+      e.code === 'ArrowUp' ||
+      e.key === ' '
+    ) {
+      e.preventDefault();
+      performStrike();
+    }
   });
+
 })();
 </script>
 </body>
