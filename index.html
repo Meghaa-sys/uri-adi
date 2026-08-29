@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <title>MĀYĀLI — Real Uri Adi VR Festival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta name="description" content="Authentic 3D Uri Adi festival pot hitting game with automatic continuous 3D swinging, real vertical rope tugging, Meta Quest VR controller stick alignment, and ceramic shatter physics!" />
+<meta name="description" content="Authentic 3D Uri Adi festival pot hitting game with automatic continuous 3D swinging, real vertical rope tugging, Meta Quest 3 VR controller stick alignment, and ceramic shatter physics!" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
 <script>
@@ -13,7 +13,7 @@
     resolved: false,
     timerActive: true,
     stickGrabbed: true,
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.55 },
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.62 },
     endChallenge: function () {}
   };
 
@@ -157,11 +157,13 @@
     }
   };
 
+  // Meta Quest 3 Precision Controller Swing & Strike Physics Component
   AFRAME.registerComponent('stick-swing', {
     init: function () {
+      this.centerWorldPos = new THREE.Vector3();
       this.tipWorldPos = new THREE.Vector3();
       this.potWorldPos = new THREE.Vector3();
-      this.lastTipPos = new THREE.Vector3();
+      this.lastPos = new THREE.Vector3();
       this.velocity = new THREE.Vector3();
     },
     tick: function (time, delta) {
@@ -172,16 +174,26 @@
       const potEntity = document.querySelector('#pot');
       if (!stick || !potEntity || !potEntity.object3D) return;
 
-      stick.object3D.getWorldPosition(this.tipWorldPos);
+      // Track world coordinates for stick center and pot
+      stick.object3D.getWorldPosition(this.centerWorldPos);
       potEntity.object3D.getWorldPosition(this.potWorldPos);
 
-      const dist = this.tipWorldPos.distanceTo(this.potWorldPos);
+      // Offset along stick axis to get front tip position in 3D world space
+      const dir = new THREE.Vector3(0, 0, -0.45).applyQuaternion(stick.object3D.quaternion);
+      this.tipWorldPos.copy(this.centerWorldPos).add(dir);
 
-      this.velocity.copy(this.tipWorldPos).sub(this.lastTipPos);
-      this.lastTipPos.copy(this.tipWorldPos);
+      // Distance from both stick center & tip to pot
+      const distCenter = this.centerWorldPos.distanceTo(this.potWorldPos);
+      const distTip = this.tipWorldPos.distanceTo(this.potWorldPos);
+      const minDist = Math.min(distCenter, distTip);
+
+      // Measure controller swing speed
+      this.velocity.copy(this.centerWorldPos).sub(this.lastPos);
+      this.lastPos.copy(this.centerWorldPos);
       const speed = delta > 0 ? (this.velocity.length() / (delta / 1000)) : 0;
 
-      if (dist < state.preset.hitRadius || (dist < state.preset.hitRadius * 1.4 && speed > 0.7)) {
+      // Meta Quest 3 Hit Condition: Proximity or active physical swing motion
+      if (minDist < state.preset.hitRadius || (minDist < state.preset.hitRadius * 1.5 && speed > 0.6)) {
         state.endChallenge(true);
       }
     }
@@ -189,7 +201,6 @@
 </script>
 
 <style>
-  /* ---------- Authentic Kerala Festival Styling ---------- */
   html, body {
     margin: 0; padding: 0; width: 100%; height: 100%;
     overflow: hidden; background: #18110c;
@@ -271,11 +282,11 @@
   <p>Step directly into the festival arena! The pot is <strong>automatically swinging and tugging in real 3D space</strong>. Take your stick and strike the pot!</p>
 
   <div class="instructions-card">
-    🥽 <strong>Meta Quest / VR Mode:</strong>
+    🥽 <strong>Meta Quest 3 / VR Mode:</strong>
     <ul>
       <li>Click <strong>"Enter VR"</strong> on Quest Browser to enter 3D scene.</li>
-      <li>Stick is auto-equipped in your right Quest controller.</li>
-      <li>Swing your controller to strike the pot as it tugs up/down!</li>
+      <li>Stick is auto-equipped in your right Quest 3 Touch controller.</li>
+      <li>Swing your physical controller to strike the pot as it tugs up/down!</li>
     </ul>
     🖱️ <strong>Desktop / Mobile:</strong> Click anywhere on screen to strike!
   </div>
@@ -320,11 +331,11 @@
   <a-cone position="0.7 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#2F5233" rotation="180 0 0"></a-cone>
   <a-cone position="0 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#E8871E" rotation="180 0 0"></a-cone>
 
-  <!-- 3D Automatic Swinging Outer Pivot (Declarative A-Frame Animation) -->
+  <!-- 3D Automatic Swinging Outer Pivot -->
   <a-entity id="potPivot" position="0 3.48 -2.2"
             animation__swing="property: rotation; from: 0 0 -34; to: 0 0 34; dir: alternate; loop: true; dur: 2200; easing: easeInOutSine">
     
-    <!-- Vertical Rope Height Tug Pivot (Declarative A-Frame Animation) -->
+    <!-- Vertical Rope Height Tug Pivot -->
     <a-entity id="potTug" position="0 0 0"
               animation__tug="property: position; from: 0 0 0; to: 0 0.35 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutQuad">
       
@@ -365,16 +376,21 @@
       <a-cursor color="#E8871E" raycaster="objects: .clickable"></a-cursor>
     </a-camera>
 
+    <!-- Meta Quest 3 Right Controller with 6DoF Pose & Stick Attachment -->
     <a-entity id="rightHand"
+              oculus-touch-controls="hand: right"
               laser-controls="hand: right"
               stick-swing
               position="0.25 1.1 -0.3">
-      <a-cylinder class="stick" visible="true" radius="0.022" height="0.75" color="#C9A227"
-                  rotation="70 0 0" position="0 -0.05 -0.3"
+      <a-cylinder class="stick" visible="true" radius="0.022" height="0.85" color="#C9A227"
+                  rotation="70 0 0" position="0 -0.05 -0.35"
                   material="roughness: 0.4"></a-cylinder>
     </a-entity>
 
-    <a-entity id="leftHand" laser-controls="hand: left"></a-entity>
+    <!-- Left Controller for Dual Hand Pose -->
+    <a-entity id="leftHand"
+              oculus-touch-controls="hand: left"
+              laser-controls="hand: left"></a-entity>
   </a-entity>
 
 </a-scene>
@@ -387,9 +403,9 @@
   const explicitTimeLimit = params.get('timeLimit');
 
   const DIFFICULTY_PRESETS = {
-    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.65 },
-    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.55 },
-    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.42 }
+    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.72 },
+    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.62 },
+    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.48 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
@@ -413,7 +429,6 @@
   const particleBurst = document.querySelector('#particleBurst');
   const playerStick = document.querySelector('#rightHand .stick');
 
-  // Start sound loop
   creakInterval = setInterval(() => {
     if (!window.MAYALI.resolved) {
       SoundFX.playRopeCreak();
@@ -498,7 +513,6 @@
     }
   });
 
-  // Desktop Strike Logic
   document.querySelector('a-scene').addEventListener('click', () => {
     if (window.MAYALI.resolved) return;
     SoundFX.playSwing();
