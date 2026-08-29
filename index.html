@@ -4,16 +4,16 @@
 <meta charset="UTF-8" />
 <title>MĀYĀLI — Real Uri Adi VR Festival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta name="description" content="Authentic 3D Uri Adi festival pot hitting game with automatic continuous 3D swinging, real vertical rope tugging, Meta Quest 3 VR controller stick alignment, and ceramic shatter physics!" />
+<meta name="description" content="Skill-based 3D Uri Adi festival pot hitting challenge with realistic swing timing, physical collision physics, Quest 3 VR support, and ceramic shatter celebration!" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
 <script>
   // Shared global game state
   window.MAYALI = {
     resolved: false,
-    timerActive: true,
+    timerActive: false,
     stickGrabbed: true,
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.62 },
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.38 },
     endChallenge: function () {}
   };
 
@@ -82,16 +82,16 @@
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(200, now);
-      osc.frequency.exponentialRampToValueAtTime(580, now + 0.13);
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(650, now + 0.12);
 
-      gain.gain.setValueAtTime(0.22, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.13);
+      osc.stop(now + 0.12);
     },
 
     playSmash() {
@@ -100,7 +100,7 @@
       const ctx = this.audioCtx;
       const now = ctx.currentTime;
 
-      const bufferSize = ctx.sampleRate * 0.4;
+      const bufferSize = ctx.sampleRate * 0.45;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       for (let i = 0; i < bufferSize; i++) {
@@ -115,7 +115,7 @@
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(1.0, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
 
       noise.connect(filter);
       filter.connect(gain);
@@ -125,15 +125,15 @@
       const osc = ctx.createOscillator();
       const oscGain = ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(190, now);
-      osc.frequency.exponentialRampToValueAtTime(30, now + 0.28);
-      oscGain.gain.setValueAtTime(0.9, now);
-      oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+      oscGain.gain.setValueAtTime(0.95, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
 
       osc.connect(oscGain);
       oscGain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.28);
+      osc.stop(now + 0.3);
     },
 
     playVictoryFanfare() {
@@ -147,7 +147,7 @@
         const gain = ctx.createGain();
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, now);
-        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -157,7 +157,7 @@
     }
   };
 
-  // Meta Quest 3 Precision Controller Swing & Strike Physics Component
+  // Skill-Based Meta Quest 3 & VR Controller Physics Component
   AFRAME.registerComponent('stick-swing', {
     init: function () {
       this.centerWorldPos = new THREE.Vector3();
@@ -174,26 +174,22 @@
       const potEntity = document.querySelector('#pot');
       if (!stick || !potEntity || !potEntity.object3D) return;
 
-      // Track world coordinates for stick center and pot
       stick.object3D.getWorldPosition(this.centerWorldPos);
       potEntity.object3D.getWorldPosition(this.potWorldPos);
 
-      // Offset along stick axis to get front tip position in 3D world space
       const dir = new THREE.Vector3(0, 0, -0.45).applyQuaternion(stick.object3D.quaternion);
       this.tipWorldPos.copy(this.centerWorldPos).add(dir);
 
-      // Distance from both stick center & tip to pot
       const distCenter = this.centerWorldPos.distanceTo(this.potWorldPos);
       const distTip = this.tipWorldPos.distanceTo(this.potWorldPos);
       const minDist = Math.min(distCenter, distTip);
 
-      // Measure controller swing speed
       this.velocity.copy(this.centerWorldPos).sub(this.lastPos);
       this.lastPos.copy(this.centerWorldPos);
       const speed = delta > 0 ? (this.velocity.length() / (delta / 1000)) : 0;
 
-      // Meta Quest 3 Hit Condition: Proximity or active physical swing motion
-      if (minDist < state.preset.hitRadius || (minDist < state.preset.hitRadius * 1.5 && speed > 0.6)) {
+      // Realistic physical strike: requires close contact AND active swing speed
+      if (minDist < state.preset.hitRadius && speed > 0.5) {
         state.endChallenge(true);
       }
     }
@@ -279,16 +275,16 @@
 <div id="startOverlay">
   <div class="subtitle">Real Onam Festival Pot Hitting</div>
   <h1>MĀYĀLI — Real Uri Adi</h1>
-  <p>Step directly into the festival arena! The pot is <strong>automatically swinging and tugging in real 3D space</strong>. Take your stick and strike the pot!</p>
+  <p>Step directly into the festival arena! The pot is <strong>automatically swinging and tugging in real 3D space</strong>. Time your swing accurately to break the pot!</p>
 
   <div class="instructions-card">
-    🥽 <strong>Meta Quest 3 / VR Mode:</strong>
+    🎯 <strong>Skill Challenge Rules:</strong>
     <ul>
-      <li>Click <strong>"Enter VR"</strong> on Quest Browser to enter 3D scene.</li>
-      <li>Stick is auto-equipped in your right Quest 3 Touch controller.</li>
-      <li>Swing your physical controller to strike the pot as it tugs up/down!</li>
+      <li>The pot sways left/right & tugs up/down.</li>
+      <li><strong>Meta Quest 3:</strong> Swing physical controller to strike pot.</li>
+      <li><strong>Desktop/Mobile:</strong> Click/tap when pot aligns with strike zone.</li>
+      <li>Mistimed swings will miss — time your hit to win!</li>
     </ul>
-    🖱️ <strong>Desktop / Mobile:</strong> Click anywhere on screen to strike!
   </div>
 
   <button id="beginBtn">Enter Festival Arena</button>
@@ -368,7 +364,7 @@
     <a-sphere position="-0.32 -0.05 -0.1" radius="0.07" color="#F4E9CF"></a-sphere>
   </a-entity>
 
-  <a-text id="worldMessage" value="⚡ Strike the Swinging Pot!" align="center" color="#F4E9CF" width="5.5"
+  <a-text id="worldMessage" value="⚡ Time your Strike to Break the Pot!" align="center" color="#F4E9CF" width="5.5"
           position="0 2.7 -1.9" visible="true"></a-text>
 
   <a-entity id="rig" position="0 0 1.2">
@@ -387,7 +383,6 @@
                   material="roughness: 0.4"></a-cylinder>
     </a-entity>
 
-    <!-- Left Controller for Dual Hand Pose -->
     <a-entity id="leftHand"
               oculus-touch-controls="hand: left"
               laser-controls="hand: left"></a-entity>
@@ -403,9 +398,9 @@
   const explicitTimeLimit = params.get('timeLimit');
 
   const DIFFICULTY_PRESETS = {
-    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.72 },
-    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.62 },
-    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.48 }
+    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.48 },
+    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.38 },
+    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.28 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
@@ -454,6 +449,7 @@
     document.getElementById('startOverlay').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
     timerLabel.textContent = timeLeft;
+    window.MAYALI.timerActive = true;
     timerHandle = setInterval(tickTimer, 1000);
     showMessage('Uri Adi! Break the Pot!', 1800);
   }
@@ -513,28 +509,48 @@
     }
   });
 
+  // REAL SKILL-BASED STRIKE CALCULATION
   document.querySelector('a-scene').addEventListener('click', () => {
-    if (window.MAYALI.resolved) return;
+    if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
     SoundFX.playSwing();
+
     const rightHand = document.querySelector('#rightHand');
 
+    // Thrust stick toward pot strike zone
     rightHand.setAttribute('animation__strike', {
-      property: 'position', to: '0 1.9 -1.6', dur: 140, dir: 'alternate', loop: 1
+      property: 'position', to: '0 1.7 -1.5', dur: 120, dir: 'alternate', loop: 1
     });
 
+    // Check 3D distance at strike peak
     setTimeout(() => {
-      if (window.MAYALI.resolved) return;
+      if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
+
       const potObj = potEntity.object3D;
       const stickObj = playerStick.object3D;
       const potW = new THREE.Vector3();
       const stickW = new THREE.Vector3();
+
       potObj.getWorldPosition(potW);
       stickObj.getWorldPosition(stickW);
 
-      if (stickW.distanceTo(potW) < window.MAYALI.preset.hitRadius * 2.8) {
+      // Stick front tip offset
+      const dir = new THREE.Vector3(0, 0, -0.45).applyQuaternion(stickObj.quaternion);
+      const tipW = stickW.clone().add(dir);
+
+      const distanceCenter = stickW.distanceTo(potW);
+      const distanceTip = tipW.distanceTo(potW);
+      const minDist = Math.min(distanceCenter, distanceTip);
+
+      const hitThreshold = window.MAYALI.preset.hitRadius;
+
+      if (minDist < hitThreshold) {
+        // DIRECT HIT!
         endChallenge(true);
+      } else {
+        // MISSED!
+        showMessage('Missed! Time your strike!', 700);
       }
-    }, 120);
+    }, 110);
   });
 })();
 </script>
