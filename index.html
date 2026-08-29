@@ -2,25 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>MĀYĀLI — Uri Adi Challenge</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="Experience the traditional Onam Uri Adi pot-breaking challenge in interactive 3D / WebXR VR!" />
+<title>MĀYĀLI — Uri Adi VR Challenge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<meta name="description" content="Experience traditional Onam Uri Adi pot breaking in interactive 3D WebXR VR with Quest controller stick pickup, 3D pendulum swing, atmospheric audio, and particle smash physics!" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
 <script>
-  // ---------------------------------------------------------------
-  // IMPORTANT: this registers the custom component BEFORE <a-scene>
-  // is parsed. A-Frame attaches components to entities the moment
-  // their HTML tag is parsed.
-  // ---------------------------------------------------------------
+  // Shared global game state
   window.MAYALI = {
     resolved: false,
     timerActive: false,
-    preset: { timeLimit: 20, swingSpeed: 2.4, swingAmplitude: 28, hitRadius: 0.45 },
-    endChallenge: function () {} // real implementation attached later
+    stickGrabbed: false,
+    preset: { timeLimit: 25, swingSpeed: 2.2, swingAmplitude: 30, hitRadius: 0.48 },
+    endChallenge: function () {}
   };
 
-  // Web Audio sound synthesizer for realistic pot smash & victory celebration
+  // Web Audio API Synthesizer (No external asset files needed - runs 100% offline & fast!)
   const SoundFX = {
     audioCtx: null,
     init() {
@@ -32,49 +29,54 @@
         this.audioCtx.resume();
       }
     },
-    playSmash() {
+
+    // Wooden stick pickup sound
+    playGrab() {
+      this.init();
+      if (!this.audioCtx) return;
+      const ctx = this.audioCtx;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    },
+
+    // Atmospheric rope creak & swing swoosh sound
+    playRopeCreak() {
       this.init();
       if (!this.audioCtx) return;
       const ctx = this.audioCtx;
       const now = ctx.currentTime;
 
-      // Noise burst for ceramic shatter
-      const bufferSize = ctx.sampleRate * 0.3;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.05));
-      }
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.setValueAtTime(800, now);
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.8, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(ctx.destination);
-      noise.start(now);
-
-      // Deep thump resonance
+      // Wooden creak noise
       const osc = ctx.createOscillator();
-      const oscGain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(160, now);
-      osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
-      oscGain.gain.setValueAtTime(0.7, now);
-      oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.linearRampToValueAtTime(180, now + 0.15);
+      osc.frequency.linearRampToValueAtTime(110, now + 0.3);
 
-      osc.connect(oscGain);
-      oscGain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.2);
+      osc.stop(now + 0.35);
     },
+
+    // Stick swing swoosh
     playSwing() {
       this.init();
       if (!this.audioCtx) return;
@@ -84,19 +86,86 @@
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.exponentialRampToValueAtTime(440, now + 0.12);
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + 0.14);
 
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.12);
+      osc.stop(now + 0.14);
+    },
+
+    // Ceramic pot shatter noise + thump
+    playSmash() {
+      this.init();
+      if (!this.audioCtx) return;
+      const ctx = this.audioCtx;
+      const now = ctx.currentTime;
+
+      // Shatter white noise burst
+      const bufferSize = ctx.sampleRate * 0.35;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.06));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(700, now);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.95, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+
+      // Deep terracotta resonance thump
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(35, now + 0.25);
+      oscGain.gain.setValueAtTime(0.85, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    },
+
+    // Victory fanfare melody
+    playVictoryFanfare() {
+      this.init();
+      if (!this.audioCtx) return;
+      const ctx = this.audioCtx;
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      notes.forEach((freq, idx) => {
+        const now = ctx.currentTime + idx * 0.12;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      });
     }
   };
 
+  // Custom A-Frame component: Tracks VR Meta Quest Controller Stick Swing & Proximity
   AFRAME.registerComponent('stick-swing', {
     init: function () {
       this.tipWorldPos = new THREE.Vector3();
@@ -106,22 +175,24 @@
     },
     tick: function (time, delta) {
       const state = window.MAYALI;
+      if (!state.stickGrabbed || state.resolved || !state.timerActive) return;
+
       const stick = this.el.querySelector('.stick');
       const potEntity = document.querySelector('#pot');
       if (!stick || !potEntity || !potEntity.object3D) return;
-      if (state.resolved || !state.timerActive) return;
 
       stick.object3D.getWorldPosition(this.tipWorldPos);
       potEntity.object3D.getWorldPosition(this.potWorldPos);
+
       const dist = this.tipWorldPos.distanceTo(this.potWorldPos);
 
+      // Track controller velocity
       this.velocity.copy(this.tipWorldPos).sub(this.lastTipPos);
       this.lastTipPos.copy(this.tipWorldPos);
-      const speed = delta > 0 ? this.velocity.length() / (delta / 1000) : 0;
+      const speed = delta > 0 ? (this.velocity.length() / (delta / 1000)) : 0;
 
-      // Check proximity or speed strike (VR motion controller or animated desktop poke)
-      if (dist < state.preset.hitRadius) {
-        SoundFX.playSmash();
+      // VR Hit condition: Proximity to pot OR fast strike motion
+      if (dist < state.preset.hitRadius || (dist < state.preset.hitRadius * 1.3 && speed > 0.8)) {
         state.endChallenge(true);
       }
     }
@@ -129,165 +200,237 @@
 </script>
 
 <style>
-  /* ---------- Kerala Onam Palette ----------
+  /* ---------- Kerala Onam Festival Design System ----------
      Kasavu Gold     #C9A227
      Terracotta Clay #B5502F
      Banana Leaf     #2F5233
      Marigold Orange #E8871E
-     Dusk Sky        #3B2A4A -> #7A4A3A
+     Dusk Sky        #2A1832 -> #5C3229
   */
   html, body {
-    margin: 0;
-    height: 100%;
-    overflow: hidden;
-    background: #1c1410;
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #1c1410;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
+
+  /* HUD Header */
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
     display: flex; justify-content: space-between; align-items: center;
     padding: 16px 24px; pointer-events: none; z-index: 10;
-    color: #F4E9CF; text-shadow: 0 2px 8px rgba(0,0,0,.7);
+    color: #F4E9CF; text-shadow: 0 2px 8px rgba(0,0,0,.8);
   }
   #hud .badge {
-    font-size: 15px; letter-spacing: .08em; text-transform: uppercase;
-    background: rgba(28, 20, 16, 0.65); padding: 8px 16px; border-radius: 20px;
-    border: 1px solid rgba(201, 162, 39, 0.4); backdrop-filter: blur(8px);
+    font-size: 14px; letter-spacing: .08em; text-transform: uppercase;
+    background: rgba(28, 20, 16, 0.75); padding: 8px 18px; border-radius: 20px;
+    border: 1px solid rgba(201, 162, 39, 0.5); backdrop-filter: blur(8px);
   }
   #hud .timer {
     font-size: 32px; font-weight: 800; color: #E8871E;
-    background: rgba(28, 20, 16, 0.75); padding: 6px 20px; border-radius: 30px;
-    border: 2px solid #E8871E; box-shadow: 0 0 15px rgba(232, 135, 30, 0.4);
+    background: rgba(28, 20, 16, 0.85); padding: 6px 22px; border-radius: 30px;
+    border: 2px solid #E8871E; box-shadow: 0 0 20px rgba(232, 135, 30, 0.5);
   }
+  #hud .hud-buttons {
+    display: flex; gap: 10px; pointer-events: auto;
+  }
+  .hud-btn {
+    padding: 8px 18px; font-size: 14px; font-weight: 700; border-radius: 20px;
+    border: 1px solid #C9A227; background: rgba(181, 80, 47, 0.85);
+    color: #F4E9CF; cursor: pointer; transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+  }
+  .hud-btn:hover {
+    background: #E8871E; color: #1c1410; transform: scale(1.05);
+  }
+  .hud-btn.exit-vr {
+    background: rgba(220, 53, 69, 0.85); border-color: #ff6b6b;
+  }
+
+  /* Start Screen Overlay */
   #startOverlay {
     position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
     align-items: center; justify-content: center; text-align: center; gap: 20px;
-    background: radial-gradient(circle at 50% 35%, #4a2f1f 0%, #1c1410 80%);
-    color: #F4E9CF; padding: 20px;
+    background: radial-gradient(circle at 50% 35%, #4a2f1f 0%, #150f0c 80%);
+    color: #F4E9CF; padding: 24px;
   }
   #startOverlay h1 {
-    font-size: 3rem; color: #C9A227; margin: 0; letter-spacing: .06em;
-    text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    font-size: 3.2rem; color: #C9A227; margin: 0; letter-spacing: .06em;
+    text-shadow: 0 4px 15px rgba(0,0,0,0.6);
   }
   #startOverlay .subtitle {
-    font-size: 1.1rem; color: #E8871E; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;
+    font-size: 1.1rem; color: #E8871E; text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700;
   }
   #startOverlay p {
-    max-width: 480px; line-height: 1.6; opacity: .9; margin: 0; font-size: 1.05rem;
+    max-width: 500px; line-height: 1.6; opacity: .95; margin: 0; font-size: 1.05rem;
   }
   #startOverlay button {
-    padding: 16px 42px; font-size: 1.15rem; border-radius: 999px; border: 2px solid #C9A227;
-    background: linear-gradient(135deg, #E8871E, #B5502F); color: #FFF; font-weight: 700;
+    padding: 16px 44px; font-size: 1.2rem; border-radius: 999px; border: 2px solid #C9A227;
+    background: linear-gradient(135deg, #E8871E, #B5502F); color: #FFF; font-weight: 800;
     cursor: pointer; letter-spacing: .04em; transition: all 0.25s ease;
-    box-shadow: 0 6px 20px rgba(232, 135, 30, 0.4);
+    box-shadow: 0 6px 24px rgba(232, 135, 30, 0.45);
   }
   #startOverlay button:hover {
-    transform: translateY(-2px) scale(1.03);
+    transform: translateY(-3px) scale(1.04);
     background: linear-gradient(135deg, #C9A227, #E8871E);
-    box-shadow: 0 8px 25px rgba(201, 162, 39, 0.6);
+    box-shadow: 0 8px 30px rgba(201, 162, 39, 0.65);
   }
-  #startOverlay small { opacity: .7; font-family: monospace; font-size: 0.9rem; }
-  .instructions {
-    background: rgba(0,0,0,0.3); padding: 10px 18px; border-radius: 12px;
-    font-size: 0.9rem; border: 1px solid rgba(244, 233, 207, 0.2);
+  .instructions-card {
+    background: rgba(0,0,0,0.4); padding: 14px 22px; border-radius: 14px;
+    font-size: 0.95rem; border: 1px solid rgba(201, 162, 39, 0.3); text-align: left;
+    max-width: 460px; line-height: 1.5;
+  }
+  .instructions-card ul { margin: 6px 0 0 0; padding-left: 20px; }
+
+  /* In-VR Floating Exit VR Button UI */
+  #vrExitOverlay {
+    position: fixed; bottom: 20px; right: 20px; z-index: 15; display: none;
   }
 </style>
 </head>
 <body>
 
 <div id="startOverlay">
-  <div class="subtitle">Traditional Onam Game</div>
-  <h1>Uri Adi</h1>
-  <p>The decorated clay pot swings high from the frame. Find your moment, time your swing, and break the pot — Maveli is watching!</p>
-  
-  <div class="instructions">
-    🎮 <strong>Controls:</strong> VR Controller Swing &nbsp;|&nbsp; 🖱️ Click/Tap screen to strike stick
+  <div class="subtitle">Traditional Kerala Festival Game</div>
+  <h1>MĀYĀLI — Uri Adi VR</h1>
+  <p>The decorated clay pot swings from the frame! Pick up your wooden stick with your <strong>Meta Quest controller</strong>, time your swing, and break the pot!</p>
+
+  <div class="instructions-card">
+    🥽 <strong>Meta Quest / WebXR Controls:</strong>
+    <ul>
+      <li>Press <strong>"Enter VR"</strong> button at bottom right on Quest Browser.</li>
+      <li>Move controller to stick & squeeze trigger/click to <strong>Grab Stick</strong>.</li>
+      <li>Swing your controller to hit the swinging pot!</li>
+    </ul>
+    🖱️ <strong>Desktop / Mobile:</strong> Click on stick to pick up, then click pot to swing!
   </div>
 
-  <button id="beginBtn">Enter the Challenge</button>
+  <button id="beginBtn">Start Experience</button>
   <small id="configLine">difficulty: medium</small>
 </div>
 
 <div id="hud" style="display:none;">
   <div class="badge" id="playerBadge">Player</div>
   <div class="timer" id="timerLabel">--</div>
-  <div class="badge" id="scoreBadge">Score: 0</div>
+  <div class="hud-buttons">
+    <button class="hud-btn" id="restartBtn">🔄 Restart</button>
+    <button class="hud-btn exit-vr" id="exitVrBtn">🚪 Exit VR</button>
+  </div>
 </div>
 
-<a-scene background="color: #241a10" vr-mode-ui="enabled: true">
+<a-scene background="color: #1a120c" vr-mode-ui="enabled: true">
 
-  <!-- Dusk sky gradient via layered domes -->
-  <a-sky color="#3B2A4A"></a-sky>
-  <a-entity geometry="primitive: sphere; radius: 60; segmentsHeight: 16"
-            material="color: #7A4A3A; opacity: 0.35; side: back; shader: flat"
+  <!-- Dusk Sky Dome with Soft Gradient -->
+  <a-sky color="#2A1832"></a-sky>
+  <a-entity geometry="primitive: sphere; radius: 65; segmentsHeight: 16"
+            material="color: #5C3229; opacity: 0.45; side: back; shader: flat"
             position="0 -20 0"></a-entity>
 
-  <!-- Ground: banana-leaf green with pookalam ring pattern at center -->
-  <a-plane rotation="-90 0 0" width="30" height="30" color="#2F5233" roughness="0.8"></a-plane>
+  <!-- Ground: Banana-leaf green grass plane -->
+  <a-plane rotation="-90 0 0" width="35" height="35" color="#2F5233" roughness="0.85"></a-plane>
+
+  <!-- Festive 3D Pookalam Rings at Ground Center -->
   <a-entity id="pookalam" position="0 0.01 -2.2" rotation="-90 0 0">
-    <a-ring radius-inner="0.05" radius-outer="0.35" color="#C9A227"></a-ring>
-    <a-ring radius-inner="0.4"  radius-outer="0.7"  color="#E8871E"></a-ring>
-    <a-ring radius-inner="0.75" radius-outer="1.0"  color="#B5502F"></a-ring>
-    <a-ring radius-inner="1.05" radius-outer="1.25" color="#F4E9CF"></a-ring>
+    <a-ring radius-inner="0.05" radius-outer="0.38" color="#C9A227"></a-ring>
+    <a-ring radius-inner="0.42" radius-outer="0.75" color="#E8871E"></a-ring>
+    <a-ring radius-inner="0.80" radius-outer="1.15" color="#B5502F"></a-ring>
+    <a-ring radius-inner="1.20" radius-outer="1.45" color="#F4E9CF"></a-ring>
   </a-entity>
 
-  <!-- Wooden frame holding the pot -->
-  <a-box class="frame" position="-1.1 1.8 -2.2" width="0.12" height="3.6" depth="0.12" color="#5b3a21"></a-box>
-  <a-box class="frame" position="1.1 1.8 -2.2" width="0.12" height="3.6" depth="0.12" color="#5b3a21"></a-box>
-  <a-box class="frame" position="0 3.5 -2.2" width="2.35" height="0.12" depth="0.12" color="#5b3a21"></a-box>
+  <!-- Decorative Glowing Lanterns on Frame -->
+  <a-sphere position="-1.1 3.5 -2.2" radius="0.12" color="#E8871E" material="emissive: #E8871E; emissiveIntensity: 0.6"></a-sphere>
+  <a-sphere position="1.1 3.5 -2.2" radius="0.12" color="#E8871E" material="emissive: #E8871E; emissiveIntensity: 0.6"></a-sphere>
 
-  <!-- Pot pivot: this swings back & forth; the pot hangs from it -->
-  <a-entity id="potPivot" position="0 3.44 -2.2">
-    <a-cylinder position="0 -0.55 0" radius="0.015" height="1.1" color="#3a2a1a"></a-cylinder>
-    <a-entity id="pot" class="clickable" position="0 -1.15 0">
-      <a-sphere radius="0.28" color="#B5502F" roughness="0.95"></a-sphere>
-      <a-cylinder position="0 0.24 0" radius="0.1" height="0.12" color="#8f3f22"></a-cylinder>
-      <!-- Decorative gold neck ring -->
-      <a-torus position="0 0.18 0" radius="0.18" radius-tubular="0.02" color="#C9A227"></a-torus>
+  <!-- Wooden Goal Frame Structure -->
+  <a-box class="frame" position="-1.2 1.8 -2.2" width="0.14" height="3.6" depth="0.14" color="#4a2e19"></a-box>
+  <a-box class="frame" position="1.2 1.8 -2.2" width="0.14" height="3.6" depth="0.14" color="#4a2e19"></a-box>
+  <a-box class="frame" position="0 3.55 -2.2" width="2.54" height="0.14" depth="0.14" color="#4a2e19"></a-box>
+
+  <!-- Interactive Stick Stand (Before Pick Up) -->
+  <a-entity id="stickPedestal" position="0.3 0.6 -0.5">
+    <a-cylinder radius="0.1" height="0.6" color="#5b3a21"></a-cylinder>
+    <!-- Standby stick resting on pedestal -->
+    <a-cylinder id="standbyStick" class="clickable" radius="0.022" height="0.7" color="#C9A227"
+                rotation="0 0 45" position="0 0.35 0"
+                material="emissive: #C9A227; emissiveIntensity: 0.3"
+                animation__glow="property: material.emissiveIntensity; from: 0.2; to: 0.7; dir: alternate; loop: true; dur: 1000"></a-cylinder>
+  </a-entity>
+
+  <!-- 3D Floating Prompt: Grab Stick -->
+  <a-text id="grabPrompt" value="👈 Click / Squeeze Trigger to Grab Stick!" align="center" color="#C9A227"
+          width="4" position="0.3 1.25 -0.5" rotation="0 -15 0"
+          animation__pulse="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dir: alternate; loop: true; dur: 800"></a-text>
+
+  <!-- 3D Swinging Pot Pivot (Multi-Axis Compound Pendulum) -->
+  <a-entity id="potPivot" position="0 3.48 -2.2">
+    <!-- Hanging Rope -->
+    <a-cylinder position="0 -0.6 0" radius="0.012" height="1.2" color="#6e5033"></a-cylinder>
+    
+    <!-- Terracotta Clay Pot -->
+    <a-entity id="pot" class="clickable" position="0 -1.25 0">
+      <a-sphere radius="0.3" color="#B5502F" roughness="0.9"></a-sphere>
+      <a-cylinder position="0 0.26 0" radius="0.11" height="0.14" color="#8f3f22"></a-cylinder>
+      <!-- Kasavu Gold Decorative Bands -->
+      <a-torus position="0 0.2 0" radius="0.19" radius-tubular="0.022" color="#C9A227"></a-torus>
+      <a-torus position="0 -0.05 0" radius="0.305" radius-tubular="0.015" color="#E8871E"></a-torus>
     </a-entity>
   </a-entity>
 
-  <!-- Broken-pot shards, hidden until hit -->
-  <a-entity id="shards" visible="false" position="0 2.3 -2.2">
-    <a-cone position="-0.15 0 0" radius-bottom="0.16" height="0.22" color="#B5502F" rotation="0 0 25"></a-cone>
-    <a-cone position="0.18 0.05 0.1" radius-bottom="0.14" height="0.18" color="#8f3f22" rotation="0 0 -35"></a-cone>
-    <a-sphere position="0 -0.1 -0.05" radius="0.08" color="#E8871E"></a-sphere>
+  <!-- Shattered Pot Fragments (Hidden until hit) -->
+  <a-entity id="shards" visible="false" position="0 2.2 -2.2">
+    <a-cone id="shard1" position="-0.2 0.1 0" radius-bottom="0.18" height="0.24" color="#B5502F" rotation="20 10 45"></a-cone>
+    <a-cone id="shard2" position="0.22 0.05 0.12" radius-bottom="0.16" height="0.2" color="#8f3f22" rotation="-30 40 -35"></a-cone>
+    <a-sphere id="shard3" position="0 -0.15 -0.08" radius="0.1" color="#E8871E"></a-sphere>
+    <a-cone id="shard4" position="-0.1 -0.2 0.15" radius-bottom="0.12" height="0.16" color="#B5502F" rotation="60 -20 15"></a-cone>
   </a-entity>
 
-  <!-- In-world message text -->
-  <a-text id="worldMessage" value="" align="center" color="#F4E9CF" width="5"
-          position="0 2.6 -1.9" visible="false" font="klaus"></a-text>
+  <!-- Interactive 3D Milk/Curd & Marigold Particle Burst Engine -->
+  <a-entity id="particleBurst" visible="false" position="0 2.2 -2.2">
+    <a-sphere position="-0.2 0.2 0.1" radius="0.06" color="#F4E9CF"></a-sphere>
+    <a-sphere position="0.25 0.15 -0.1" radius="0.07" color="#E8871E"></a-sphere>
+    <a-sphere position="-0.15 -0.1 0.2" radius="0.08" color="#FFF"></a-sphere>
+    <a-sphere position="0.1 -0.25 -0.15" radius="0.05" color="#C9A227"></a-sphere>
+    <a-sphere position="0 0.3 -0.2" radius="0.07" color="#B5502F"></a-sphere>
+    <a-sphere position="-0.3 -0.05 -0.1" radius="0.06" color="#F4E9CF"></a-sphere>
+  </a-entity>
 
-  <!-- Player rig -->
+  <!-- 3D World Status Message Text -->
+  <a-text id="worldMessage" value="" align="center" color="#F4E9CF" width="5.5"
+          position="0 2.7 -1.9" visible="false"></a-text>
+
+  <!-- Player Rig & Meta Quest Controllers -->
   <a-entity id="rig" position="0 0 1.2">
     <a-camera position="0 1.6 0" look-controls wasd-controls="enabled: false">
       <a-cursor color="#E8871E" raycaster="objects: .clickable"></a-cursor>
     </a-camera>
 
-    <!-- Right hand controller with the stick attached; laser-controls covers VR controllers -->
+    <!-- Meta Quest Right Hand Controller with embedded stick -->
     <a-entity id="rightHand"
               laser-controls="hand: right"
               stick-swing
               position="0.25 1.1 -0.3">
-      <a-cylinder class="stick" radius="0.02" height="0.65" color="#4a2f1f" rotation="70 0 0"
-                  position="0 0 -0.25"></a-cylinder>
+      <!-- Embedded Stick attached cleanly into Quest controller grip -->
+      <a-cylinder class="stick" visible="false" radius="0.022" height="0.7" color="#C9A227"
+                  rotation="70 0 0" position="0 -0.05 -0.3"
+                  material="roughness: 0.4"></a-cylinder>
     </a-entity>
+
+    <!-- Left Hand Controller for dual hand VR support -->
+    <a-entity id="leftHand" laser-controls="hand: left"></a-entity>
   </a-entity>
 
 </a-scene>
 
 <script>
 (function () {
-  // ---- Config pulled from URL query parameters ----
   const params = new URLSearchParams(window.location.search);
   const difficulty = params.get('difficulty') || 'medium';
   const player = params.get('player') || 'red';
   const explicitTimeLimit = params.get('timeLimit');
 
   const DIFFICULTY_PRESETS = {
-    easy:   { timeLimit: 30, swingSpeed: 1.6, swingAmplitude: 18, hitRadius: 0.55 },
-    medium: { timeLimit: 20, swingSpeed: 2.4, swingAmplitude: 28, hitRadius: 0.45 },
-    hard:   { timeLimit: 14, swingSpeed: 3.2, swingAmplitude: 40, hitRadius: 0.35 }
+    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 20, hitRadius: 0.6 },
+    medium: { timeLimit: 25, swingSpeed: 2.2, swingAmplitude: 30, hitRadius: 0.48 },
+    hard:   { timeLimit: 16, swingSpeed: 3.0, swingAmplitude: 42, hitRadius: 0.36 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
@@ -297,36 +440,55 @@
   document.getElementById('configLine').textContent = `player: ${player} · difficulty: ${difficulty}`;
   document.getElementById('playerBadge').textContent = player.toUpperCase();
 
-  function sendResultToServer(result) {
-    console.log('[MAYALI] challenge result ->', { player, difficulty, ...result });
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'mayali_challenge_result', player, difficulty, ...result }, '*');
-    }
-  }
-
   let score = 0;
   let timeLeft = preset.timeLimit;
+  let timerHandle = null;
+  let creakInterval = null;
 
   const timerLabel = document.getElementById('timerLabel');
   const worldMessage = document.querySelector('#worldMessage');
   const potPivot = document.querySelector('#potPivot');
   const potEntity = document.querySelector('#pot');
   const shards = document.querySelector('#shards');
+  const particleBurst = document.querySelector('#particleBurst');
+  const grabPrompt = document.querySelector('#grabPrompt');
+  const standbyStick = document.querySelector('#standbyStick');
+  const playerStick = document.querySelector('#rightHand .stick');
 
-  function startSwing() {
-    potPivot.setAttribute('animation', {
+  // Start multi-axis 3D swinging animation & rhythmic rope creak audio
+  function start3DPendulumSwing() {
+    potPivot.setAttribute('animation__swingZ', {
       property: 'rotation',
-      from: `0 0 -${preset.swingAmplitude}`,
-      to: `0 0 ${preset.swingAmplitude}`,
+      from: `-${preset.swingAmplitude/2} 0 -${preset.swingAmplitude}`,
+      to: `${preset.swingAmplitude/2} 0 ${preset.swingAmplitude}`,
       dir: 'alternate',
       loop: true,
-      dur: (1000 / preset.swingSpeed) * 250,
+      dur: (1000 / preset.swingSpeed) * 260,
       easing: 'easeInOutSine'
     });
+
+    potPivot.setAttribute('animation__swingX', {
+      property: 'position',
+      from: `-0.15 3.48 -2.2`,
+      to: `0.15 3.48 -2.2`,
+      dir: 'alternate',
+      loop: true,
+      dur: (1000 / preset.swingSpeed) * 380,
+      easing: 'easeInOutQuad'
+    });
+
+    // Play periodic rope creak sound during swing
+    creakInterval = setInterval(() => {
+      if (window.MAYALI.timerActive && !window.MAYALI.resolved) {
+        SoundFX.playRopeCreak();
+      }
+    }, (1000 / preset.swingSpeed) * 260);
   }
 
-  function stopSwing() {
-    potPivot.removeAttribute('animation');
+  function stop3DPendulumSwing() {
+    potPivot.removeAttribute('animation__swingZ');
+    potPivot.removeAttribute('animation__swingX');
+    if (creakInterval) clearInterval(creakInterval);
   }
 
   function showMessage(text, ms) {
@@ -341,27 +503,43 @@
     if (timeLeft <= 0) endChallenge(false);
   }
 
-  let timerHandle = null;
+  // Interactive Stick Pick-Up Mechanic
+  function pickupStick() {
+    if (window.MAYALI.stickGrabbed) return;
+    SoundFX.playGrab();
+    window.MAYALI.stickGrabbed = true;
 
-  function beginChallenge() {
+    // Hide pedestal standby stick & prompt, activate stick in right Quest hand
+    standbyStick.setAttribute('visible', false);
+    grabPrompt.setAttribute('visible', false);
+    playerStick.setAttribute('visible', true);
+
+    showMessage('Stick Equipped! Preparing Uri...', 1200);
+
+    // 3-2-1 Countdown to game start
+    setTimeout(() => {
+      let count = 3;
+      showMessage(String(count), 900);
+      const countdown = setInterval(() => {
+        count -= 1;
+        if (count > 0) {
+          showMessage(String(count), 900);
+        } else {
+          clearInterval(countdown);
+          showMessage('Uri Adi! Strike!', 1000);
+          start3DPendulumSwing();
+          timerLabel.textContent = timeLeft;
+          window.MAYALI.timerActive = true;
+          timerHandle = setInterval(tickTimer, 1000);
+        }
+      }, 1000);
+    }, 1200);
+  }
+
+  function beginExperience() {
     SoundFX.init();
     document.getElementById('startOverlay').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
-    let count = 3;
-    showMessage(String(count), 900);
-    const countdown = setInterval(() => {
-      count -= 1;
-      if (count > 0) {
-        showMessage(String(count), 900);
-      } else {
-        clearInterval(countdown);
-        showMessage('Uri Adi!', 900);
-        startSwing();
-        timerLabel.textContent = timeLeft;
-        window.MAYALI.timerActive = true;
-        timerHandle = setInterval(tickTimer, 1000);
-      }
-    }, 1000);
   }
 
   function endChallenge(success) {
@@ -369,71 +547,95 @@
     window.MAYALI.resolved = true;
     window.MAYALI.timerActive = false;
     clearInterval(timerHandle);
-    stopSwing();
+    stop3DPendulumSwing();
 
     if (success) {
       potPivot.setAttribute('visible', false);
       shards.setAttribute('visible', true);
-      shards.setAttribute('animation__burst', {
-        property: 'scale', from: '1 1 1', to: '1.8 1.8 1.8', dur: 500, easing: 'easeOutQuad'
+      particleBurst.setAttribute('visible', true);
+
+      // Animate ceramic shards bursting
+      shards.setAttribute('animation__shatter', {
+        property: 'scale', from: '1 1 1', to: '2.2 2.2 2.2', dur: 600, easing: 'easeOutExpo'
       });
-      showMessage('Poo pottichu! Victory!', 3500);
+
+      // Animate particle splash exploding
+      particleBurst.setAttribute('animation__burst', {
+        property: 'scale', from: '0.5 0.5 0.5', to: '3 3 3', dur: 800, easing: 'easeOutQuad'
+      });
+      particleBurst.setAttribute('animation__fade', {
+        property: 'position', to: '0 1.2 -2.2', dur: 1200, easing: 'easeInQuad'
+      });
+
+      SoundFX.playSmash();
+      SoundFX.playVictoryFanfare();
+
+      showMessage('🌸 POO POTTICHU! VICTORY! 🌸', 4500);
       document.getElementById('scoreBadge').textContent = `Score: ${++score}`;
     } else {
-      showMessage("Time's up — the pot swings on.", 3500);
+      showMessage("Time's up! The Uri swings away.", 3500);
     }
-
-    sendResultToServer({
-      success,
-      timeTaken: preset.timeLimit - Math.max(timeLeft, 0),
-      timeLimit: preset.timeLimit
-    });
   }
 
   window.MAYALI.endChallenge = endChallenge;
-  document.getElementById('beginBtn').addEventListener('click', beginChallenge);
 
-  // Responsive desktop/mobile click handler: animate stick swing and calculate strike proximity
-  function handleDesktopStrike() {
+  // Event Listeners
+  document.getElementById('beginBtn').addEventListener('click', beginExperience);
+  standbyStick.addEventListener('click', pickupStick);
+  grabPrompt.addEventListener('click', pickupStick);
+
+  // Restart Button
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    window.location.reload();
+  });
+
+  // Exit VR Button Handling (DOM & WebXR API)
+  const exitVrBtn = document.getElementById('exitVrBtn');
+  exitVrBtn.addEventListener('click', () => {
+    const scene = document.querySelector('a-scene');
+    if (scene && scene.is('vr-mode')) {
+      scene.exitVR();
+    } else {
+      // If on desktop browser, redirect or reset
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('startOverlay').style.display = 'flex';
+    }
+  });
+
+  // VR Controllers Trigger Press Event Listener to Grab Stick
+  document.querySelector('#rightHand').addEventListener('triggerdown', pickupStick);
+  document.querySelector('#rightHand').addEventListener('gripdown', pickupStick);
+  document.querySelector('#leftHand').addEventListener('triggerdown', pickupStick);
+
+  // Desktop / Mobile Fallback Click to swing stick
+  document.querySelector('a-scene').addEventListener('click', () => {
+    if (!window.MAYALI.stickGrabbed) {
+      pickupStick();
+      return;
+    }
     if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
+
     SoundFX.playSwing();
-
     const rightHand = document.querySelector('#rightHand');
-    const stick = document.querySelector('#rightHand .stick');
 
-    // Temporarily move rightHand toward pot direction for poke animation
     rightHand.setAttribute('animation__strike', {
-      property: 'position',
-      to: '0 1.9 -1.6',
-      dur: 150,
-      dir: 'alternate',
-      loop: 1
+      property: 'position', to: '0 1.9 -1.6', dur: 140, dir: 'alternate', loop: 1
     });
 
-    stick.setAttribute('animation__poke', {
-      property: 'position', to: '0 0 -0.8', dur: 150, dir: 'alternate', loop: 1
-    });
-
-    // Check hit logic at peak of swing
     setTimeout(() => {
       if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
       const potObj = potEntity.object3D;
-      const stickObj = stick.object3D;
-      const potWorld = new THREE.Vector3();
-      const stickWorld = new THREE.Vector3();
-      potObj.getWorldPosition(potWorld);
-      stickObj.getWorldPosition(stickWorld);
+      const stickObj = playerStick.object3D;
+      const potW = new THREE.Vector3();
+      const stickW = new THREE.Vector3();
+      potObj.getWorldPosition(potW);
+      stickObj.getWorldPosition(stickW);
 
-      const d = stickWorld.distanceTo(potWorld);
-      if (d < window.MAYALI.preset.hitRadius * 2.2) {
-        SoundFX.playSmash();
+      if (stickW.distanceTo(potW) < window.MAYALI.preset.hitRadius * 2.5) {
         endChallenge(true);
       }
     }, 120);
-  }
-
-  document.querySelector('a-scene').addEventListener('click', handleDesktopStrike);
-  potEntity.addEventListener('click', handleDesktopStrike);
+  });
 })();
 </script>
 </body>
