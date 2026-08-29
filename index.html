@@ -11,9 +11,9 @@
   // Shared global game state
   window.MAYALI = {
     resolved: false,
-    timerActive: true, // Active on enter for real continuous gameplay
-    stickGrabbed: true, // Ready immediately on enter
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.52 },
+    timerActive: true,
+    stickGrabbed: true,
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.55 },
     endChallenge: function () {}
   };
 
@@ -30,7 +30,6 @@
       }
     },
 
-    // Rope Creak Sound
     playRopeCreak() {
       this.init();
       if (!this.audioCtx) return;
@@ -53,7 +52,6 @@
       osc.stop(now + 0.32);
     },
 
-    // Traditional Chenda / Dhol Drum Rhythm Accent
     playChendaBeat() {
       this.init();
       if (!this.audioCtx) return;
@@ -75,7 +73,6 @@
       osc.stop(now + 0.12);
     },
 
-    // Stick Swing Wind Swoosh
     playSwing() {
       this.init();
       if (!this.audioCtx) return;
@@ -97,14 +94,12 @@
       osc.stop(now + 0.13);
     },
 
-    // Real Ceramic Smash Impact Sound
     playSmash() {
       this.init();
       if (!this.audioCtx) return;
       const ctx = this.audioCtx;
       const now = ctx.currentTime;
 
-      // Shatter noise burst
       const bufferSize = ctx.sampleRate * 0.4;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -127,7 +122,6 @@
       gain.connect(ctx.destination);
       noise.start(now);
 
-      // Deep clay resonance thump
       const osc = ctx.createOscillator();
       const oscGain = ctx.createGain();
       osc.type = 'triangle';
@@ -142,7 +136,6 @@
       osc.stop(now + 0.28);
     },
 
-    // Victory Festival Fanfare
     playVictoryFanfare() {
       this.init();
       if (!this.audioCtx) return;
@@ -164,7 +157,6 @@
     }
   };
 
-  // Component: VR Controller Stick Swing & Proximity Physics
   AFRAME.registerComponent('stick-swing', {
     init: function () {
       this.tipWorldPos = new THREE.Vector3();
@@ -189,8 +181,7 @@
       this.lastTipPos.copy(this.tipWorldPos);
       const speed = delta > 0 ? (this.velocity.length() / (delta / 1000)) : 0;
 
-      // Real Strike Collision: Proximity to pot or active swing
-      if (dist < state.preset.hitRadius || (dist < state.preset.hitRadius * 1.35 && speed > 0.75)) {
+      if (dist < state.preset.hitRadius || (dist < state.preset.hitRadius * 1.4 && speed > 0.7)) {
         state.endChallenge(true);
       }
     }
@@ -198,20 +189,13 @@
 </script>
 
 <style>
-  /* ---------- Authentic Kerala Festival Styling ----------
-     Kasavu Gold     #C9A227
-     Terracotta Clay #B5502F
-     Banana Leaf     #2F5233
-     Marigold Orange #E8871E
-     Dusk Sky        #25152B -> #542B23
-  */
+  /* ---------- Authentic Kerala Festival Styling ---------- */
   html, body {
     margin: 0; padding: 0; width: 100%; height: 100%;
     overflow: hidden; background: #18110c;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
 
-  /* HUD Header */
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
     display: flex; justify-content: space-between; align-items: center;
@@ -244,7 +228,6 @@
     background: rgba(220, 53, 69, 0.85); border-color: #ff6b6b;
   }
 
-  /* Start Screen Overlay */
   #startOverlay {
     position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
     align-items: center; justify-content: center; text-align: center; gap: 20px;
@@ -294,7 +277,7 @@
       <li>Stick is auto-equipped in your right Quest controller.</li>
       <li>Swing your controller to strike the pot as it tugs up/down!</li>
     </ul>
-    🖱️ <strong>Desktop / Mobile:</strong> Click anywhere on the 3D scene to strike!
+    🖱️ <strong>Desktop / Mobile:</strong> Click anywhere on screen to strike!
   </div>
 
   <button id="beginBtn">Enter Festival Arena</button>
@@ -312,16 +295,13 @@
 
 <a-scene background="color: #160e08" vr-mode-ui="enabled: true">
 
-  <!-- Festival Dusk Sky Dome -->
   <a-sky color="#25152B"></a-sky>
   <a-entity geometry="primitive: sphere; radius: 65; segmentsHeight: 16"
             material="color: #542B23; opacity: 0.5; side: back; shader: flat"
             position="0 -20 0"></a-entity>
 
-  <!-- Ground Grass Plane -->
   <a-plane rotation="-90 0 0" width="35" height="35" color="#2F5233" roughness="0.85"></a-plane>
 
-  <!-- Central Festive Pookalam Artwork -->
   <a-entity id="pookalam" position="0 0.01 -2.2" rotation="-90 0 0">
     <a-ring radius-inner="0.05" radius-outer="0.38" color="#C9A227"></a-ring>
     <a-ring radius-inner="0.42" radius-outer="0.75" color="#E8871E"></a-ring>
@@ -329,36 +309,38 @@
     <a-ring radius-inner="1.20" radius-outer="1.45" color="#F4E9CF"></a-ring>
   </a-entity>
 
-  <!-- Festival Decorative Marigold Lanterns -->
   <a-sphere position="-1.2 3.55 -2.2" radius="0.13" color="#E8871E" material="emissive: #E8871E; emissiveIntensity: 0.7"></a-sphere>
   <a-sphere position="1.2 3.55 -2.2" radius="0.13" color="#E8871E" material="emissive: #E8871E; emissiveIntensity: 0.7"></a-sphere>
 
-  <!-- Festival Wooden Goal Posts -->
   <a-box class="frame" position="-1.25 1.8 -2.2" width="0.15" height="3.6" depth="0.15" color="#422916"></a-box>
   <a-box class="frame" position="1.25 1.8 -2.2" width="0.15" height="3.6" depth="0.15" color="#422916"></a-box>
   <a-box class="frame" position="0 3.6 -2.2" width="2.65" height="0.15" depth="0.15" color="#422916"></a-box>
 
-  <!-- Decorative Festival Mango Leaf Garlands hanging from frame -->
   <a-cone position="-0.7 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#2F5233" rotation="180 0 0"></a-cone>
   <a-cone position="0.7 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#2F5233" rotation="180 0 0"></a-cone>
   <a-cone position="0 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#E8871E" rotation="180 0 0"></a-cone>
 
-  <!-- 3D Automatic Swinging & Vertical Tugging Pot Pivot -->
-  <a-entity id="potPivot" position="0 3.48 -2.2">
-    <!-- Dynamic Rope -->
-    <a-cylinder id="rope" position="0 -0.6 0" radius="0.013" height="1.2" color="#6e4f32"></a-cylinder>
+  <!-- 3D Automatic Swinging Outer Pivot (Declarative A-Frame Animation) -->
+  <a-entity id="potPivot" position="0 3.48 -2.2"
+            animation__swing="property: rotation; from: 0 0 -34; to: 0 0 34; dir: alternate; loop: true; dur: 2200; easing: easeInOutSine">
     
-    <!-- Terracotta Clay Curd Pot -->
-    <a-entity id="pot" class="clickable" position="0 -1.25 0">
-      <a-sphere radius="0.32" color="#B5502F" roughness="0.9"></a-sphere>
-      <a-cylinder position="0 0.27 0" radius="0.12" height="0.15" color="#8f3f22"></a-cylinder>
-      <!-- Kasavu Gold Decorative Bands -->
-      <a-torus position="0 0.22 0" radius="0.2" radius-tubular="0.022" color="#C9A227"></a-torus>
-      <a-torus position="0 -0.05 0" radius="0.325" radius-tubular="0.015" color="#E8871E"></a-torus>
+    <!-- Vertical Rope Height Tug Pivot (Declarative A-Frame Animation) -->
+    <a-entity id="potTug" position="0 0 0"
+              animation__tug="property: position; from: 0 0 0; to: 0 0.35 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutQuad">
+      
+      <!-- Dynamic Rope -->
+      <a-cylinder id="rope" position="0 -0.6 0" radius="0.013" height="1.2" color="#6e4f32"></a-cylinder>
+      
+      <!-- Terracotta Clay Curd Pot -->
+      <a-entity id="pot" class="clickable" position="0 -1.25 0">
+        <a-sphere radius="0.32" color="#B5502F" roughness="0.9"></a-sphere>
+        <a-cylinder position="0 0.27 0" radius="0.12" height="0.15" color="#8f3f22"></a-cylinder>
+        <a-torus position="0 0.22 0" radius="0.2" radius-tubular="0.022" color="#C9A227"></a-torus>
+        <a-torus position="0 -0.05 0" radius="0.325" radius-tubular="0.015" color="#E8871E"></a-torus>
+      </a-entity>
     </a-entity>
   </a-entity>
 
-  <!-- Ceramic Shards (Hidden until hit) -->
   <a-entity id="shards" visible="false" position="0 2.2 -2.2">
     <a-cone id="shard1" position="-0.22 0.12 0" radius-bottom="0.19" height="0.25" color="#B5502F" rotation="20 10 45"></a-cone>
     <a-cone id="shard2" position="0.24 0.06 0.12" radius-bottom="0.17" height="0.22" color="#8f3f22" rotation="-30 40 -35"></a-cone>
@@ -366,7 +348,6 @@
     <a-cone id="shard4" position="-0.12 -0.22 0.15" radius-bottom="0.13" height="0.18" color="#B5502F" rotation="60 -20 15"></a-cone>
   </a-entity>
 
-  <!-- Curd/Milk & Flower Splash Burst Particles -->
   <a-entity id="particleBurst" visible="false" position="0 2.2 -2.2">
     <a-sphere position="-0.2 0.25 0.1" radius="0.07" color="#F4E9CF"></a-sphere>
     <a-sphere position="0.25 0.18 -0.1" radius="0.08" color="#E8871E"></a-sphere>
@@ -376,22 +357,18 @@
     <a-sphere position="-0.32 -0.05 -0.1" radius="0.07" color="#F4E9CF"></a-sphere>
   </a-entity>
 
-  <!-- 3D World Floating Text -->
   <a-text id="worldMessage" value="⚡ Strike the Swinging Pot!" align="center" color="#F4E9CF" width="5.5"
           position="0 2.7 -1.9" visible="true"></a-text>
 
-  <!-- Player Rig & Meta Quest Controllers -->
   <a-entity id="rig" position="0 0 1.2">
     <a-camera position="0 1.6 0" look-controls wasd-controls="enabled: false">
       <a-cursor color="#E8871E" raycaster="objects: .clickable"></a-cursor>
     </a-camera>
 
-    <!-- Meta Quest Right Controller with Auto-Equipped Wooden Stick -->
     <a-entity id="rightHand"
               laser-controls="hand: right"
               stick-swing
               position="0.25 1.1 -0.3">
-      <!-- Real Wooden Bat/Stick aligned along Meta Quest controller axis -->
       <a-cylinder class="stick" visible="true" radius="0.022" height="0.75" color="#C9A227"
                   rotation="70 0 0" position="0 -0.05 -0.3"
                   material="roughness: 0.4"></a-cylinder>
@@ -410,9 +387,9 @@
   const explicitTimeLimit = params.get('timeLimit');
 
   const DIFFICULTY_PRESETS = {
-    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.62 },
-    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.52 },
-    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.38 }
+    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.65 },
+    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.55 },
+    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.42 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
@@ -430,61 +407,19 @@
   const timerLabel = document.getElementById('timerLabel');
   const worldMessage = document.querySelector('#worldMessage');
   const potPivot = document.querySelector('#potPivot');
+  const potTug = document.querySelector('#potTug');
   const potEntity = document.querySelector('#pot');
   const shards = document.querySelector('#shards');
   const particleBurst = document.querySelector('#particleBurst');
   const playerStick = document.querySelector('#rightHand .stick');
 
-  // AUTOMATIC CONTINUOUS 3D SWINGING & REAL FESTIVAL ROPE TUGGING
-  function startAutomatic3DPendulum() {
-    // 1. Left-Right Pendulum Swing (Z Rotation)
-    potPivot.setAttribute('animation__swingZ', {
-      property: 'rotation',
-      from: `-${preset.swingAmplitude/2} 0 -${preset.swingAmplitude}`,
-      to: `${preset.swingAmplitude/2} 0 ${preset.swingAmplitude}`,
-      dir: 'alternate',
-      loop: true,
-      dur: (1000 / preset.swingSpeed) * 240,
-      easing: 'easeInOutSine'
-    });
-
-    // 2. Forward-Backward Spatial Offset (X Position)
-    potPivot.setAttribute('animation__swingX', {
-      property: 'position',
-      from: `-0.2 3.48 -2.2`,
-      to: `0.2 3.48 -2.2`,
-      dir: 'alternate',
-      loop: true,
-      dur: (1000 / preset.swingSpeed) * 360,
-      easing: 'easeInOutQuad'
-    });
-
-    // 3. Real Festival Rope Tug (Vertical Y Movement) - Simulates person pulling rope up/down!
-    potPivot.setAttribute('animation__tugY', {
-      property: 'position',
-      from: `0 3.48 -2.2`,
-      to: `0 3.8 -2.2`,
-      dir: 'alternate',
-      loop: true,
-      dur: (1000 / preset.swingSpeed) * 190,
-      easing: 'easeInOutCubic'
-    });
-
-    // Periodic rope creak & traditional drum beat audio
-    creakInterval = setInterval(() => {
-      if (!window.MAYALI.resolved) {
-        SoundFX.playRopeCreak();
-        if (Math.random() > 0.4) SoundFX.playChendaBeat();
-      }
-    }, (1000 / preset.swingSpeed) * 240);
-  }
-
-  function stopAutomatic3DPendulum() {
-    potPivot.removeAttribute('animation__swingZ');
-    potPivot.removeAttribute('animation__swingX');
-    potPivot.removeAttribute('animation__tugY');
-    if (creakInterval) clearInterval(creakInterval);
-  }
+  // Start sound loop
+  creakInterval = setInterval(() => {
+    if (!window.MAYALI.resolved) {
+      SoundFX.playRopeCreak();
+      if (Math.random() > 0.45) SoundFX.playChendaBeat();
+    }
+  }, 2200);
 
   function showMessage(text, ms) {
     worldMessage.setAttribute('value', text);
@@ -499,16 +434,19 @@
     if (timeLeft <= 0) endChallenge(false);
   }
 
-  // Start automatic swinging immediately when scene loads!
-  startAutomatic3DPendulum();
-
   function enterFestivalArena() {
     SoundFX.init();
     document.getElementById('startOverlay').style.display = 'none';
     document.getElementById('hud').style.display = 'flex';
     timerLabel.textContent = timeLeft;
     timerHandle = setInterval(tickTimer, 1000);
-    showMessage('Uri Adi! Break the Pot!', 1500);
+    showMessage('Uri Adi! Break the Pot!', 1800);
+  }
+
+  function stopSwingAnimations() {
+    potPivot.removeAttribute('animation__swing');
+    potTug.removeAttribute('animation__tug');
+    if (creakInterval) clearInterval(creakInterval);
   }
 
   function endChallenge(success) {
@@ -516,19 +454,17 @@
     window.MAYALI.resolved = true;
     window.MAYALI.timerActive = false;
     clearInterval(timerHandle);
-    stopAutomatic3DPendulum();
+    stopSwingAnimations();
 
     if (success) {
       potPivot.setAttribute('visible', false);
       shards.setAttribute('visible', true);
       particleBurst.setAttribute('visible', true);
 
-      // Shatter & fragment burst
       shards.setAttribute('animation__shatter', {
         property: 'scale', from: '1 1 1', to: '2.4 2.4 2.4', dur: 600, easing: 'easeOutExpo'
       });
 
-      // Curd & milk splash expansion
       particleBurst.setAttribute('animation__burst', {
         property: 'scale', from: '0.5 0.5 0.5', to: '3.5 3.5 3.5', dur: 800, easing: 'easeOutQuad'
       });
@@ -562,7 +498,7 @@
     }
   });
 
-  // Desktop & Mobile Click Strike Listener
+  // Desktop Strike Logic
   document.querySelector('a-scene').addEventListener('click', () => {
     if (window.MAYALI.resolved) return;
     SoundFX.playSwing();
@@ -581,7 +517,7 @@
       potObj.getWorldPosition(potW);
       stickObj.getWorldPosition(stickW);
 
-      if (stickW.distanceTo(potW) < window.MAYALI.preset.hitRadius * 2.5) {
+      if (stickW.distanceTo(potW) < window.MAYALI.preset.hitRadius * 2.8) {
         endChallenge(true);
       }
     }, 120);
