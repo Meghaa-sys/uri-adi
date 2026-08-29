@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <title>MĀYĀLI — Real Uri Adi VR Festival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta name="description" content="Multi-strike Uri Adi pot hitting simulation with continuous keyboard/mouse/VR hitting, guaranteed 3-strike shatter, eye-level pot swinging, ceramic cracking, and particle victory!" />
+<meta name="description" content="Skill-based Uri Adi pot hitting simulation. Time your bat strike precisely when the pot swings through the center position to shatter it in 3 successful hits!" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍯</text></svg>" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
@@ -19,13 +19,13 @@
     });
   }
 
-  // Shared global game state with Multi-Hit Pot Durability
+  // Shared global game state with Skill-Based Center Window Physics
   window.MAYALI = {
     resolved: false,
     timerActive: false,
     hitsRequired: 3,
     hitsCurrent: 0,
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.5 },
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, centerThreshold: 0.38 },
     endChallenge: function () {}
   };
 
@@ -208,8 +208,6 @@
   // Meta Quest 3 VR 6DoF Controller Physics Component
   AFRAME.registerComponent('stick-swing', {
     init: function () {
-      this.centerWorldPos = new THREE.Vector3();
-      this.tipWorldPos = new THREE.Vector3();
       this.potWorldPos = new THREE.Vector3();
       this.lastVRHitTime = 0;
     },
@@ -217,24 +215,23 @@
       const state = window.MAYALI;
       if (state.resolved || !state.timerActive) return;
 
-      const stick = this.el.querySelector('.stick');
       const potEntity = document.querySelector('#pot');
-      if (!stick || !potEntity || !potEntity.object3D) return;
+      if (!potEntity || !potEntity.object3D) return;
 
-      stick.object3D.getWorldPosition(this.centerWorldPos);
       potEntity.object3D.getWorldPosition(this.potWorldPos);
 
-      const dir = new THREE.Vector3(0, 0, -0.45).applyQuaternion(stick.object3D.quaternion);
-      this.tipWorldPos.copy(this.centerWorldPos).add(dir);
-
-      const distCenter = this.centerWorldPos.distanceTo(this.potWorldPos);
-      const distTip = this.tipWorldPos.distanceTo(this.potWorldPos);
-      const minDist = Math.min(distCenter, distTip);
-
-      if (minDist < state.preset.hitRadius && (time - this.lastVRHitTime > 200)) {
-        this.lastVRHitTime = time;
-        triggerControllerHaptics();
-        registerPotHit();
+      // In VR physical swinging, hit registers when pot is near center AND VR stick is near pot
+      if (Math.abs(this.potWorldPos.x) <= state.preset.centerThreshold && (time - this.lastVRHitTime > 250)) {
+        const stick = this.el.querySelector('.stick');
+        if (stick && stick.object3D) {
+          const stickW = new THREE.Vector3();
+          stick.object3D.getWorldPosition(stickW);
+          if (stickW.distanceTo(this.potWorldPos) < 1.4) {
+            this.lastVRHitTime = time;
+            triggerControllerHaptics();
+            registerPotHit();
+          }
+        }
       }
     }
   });
@@ -245,7 +242,7 @@
     if (state.resolved) return;
 
     const now = Date.now();
-    if (now - lastHitTimeDebounce < 180) return; // Prevent double-trigger within 180ms
+    if (now - lastHitTimeDebounce < 220) return; // Prevent double-trigger within 220ms
     lastHitTimeDebounce = now;
     lastHitTimestamp = now;
 
@@ -281,7 +278,7 @@
         }, 280);
       }
 
-      window.showMessage(`💥 HIT ${state.hitsCurrent}/${state.hitsRequired}! ${remaining} MORE TO BREAK!`, 1400);
+      window.showMessage(`💥 DIRECT HIT ${state.hitsCurrent}/${state.hitsRequired}! ${remaining} MORE TO BREAK!`, 1400);
       document.getElementById('hitCounterLabel').textContent = `Hits: ${state.hitsCurrent}/${state.hitsRequired}`;
     } else {
       state.endChallenge(true);
@@ -379,19 +376,19 @@
 <div id="startOverlay">
   <div class="subtitle">Real Onam Festival Pot Hitting</div>
   <h1>MĀYĀLI — Real Uri Adi</h1>
-  <p>Step directly into the festival arena! Land <strong>3 solid strikes</strong> on the swinging pot to smash it open!</p>
+  <p>Step directly into the festival arena! Time your strike to hit the swinging pot <strong>when it reaches the middle</strong> to smash it in 3 hits!</p>
 
   <div class="instructions-card">
-    🏏 <strong>Strike Controls:</strong>
+    🏏 <strong>Precision Timing Controls:</strong>
     <ul>
-      <li><strong>Keyboard:</strong> Press <span class="key-badge">Spacebar</span>, <span class="key-badge">Enter</span>, <span class="key-badge">X</span>, or <span class="key-badge">F</span> to strike!</li>
-      <li><strong>Mouse/Touch:</strong> Click or tap anywhere while aiming at the pot.</li>
-      <li><strong>Meta Quest 3 VR:</strong> Swing physical 6DoF VR controller.</li>
+      <li><strong>Keyboard:</strong> Press <span class="key-badge">Spacebar</span>, <span class="key-badge">Enter</span>, <span class="key-badge">X</span>, or <span class="key-badge">F</span> when the pot is in the center!</li>
+      <li><strong>Mouse/Touch:</strong> Click or tap when the swinging pot aligns at the middle.</li>
+      <li><strong>Meta Quest 3 VR:</strong> Swing physical controller when pot reaches center.</li>
     </ul>
   </div>
 
   <button id="beginBtn">Enter Festival Arena</button>
-  <small id="configLine">difficulty: medium · 3 hits to smash</small>
+  <small id="configLine">difficulty: medium · 3 timed hits to smash</small>
 </div>
 
 <div id="hud" style="display:none;">
@@ -464,7 +461,7 @@
     <a-sphere position="-0.32 -0.05 -0.1" radius="0.07" color="#F4E9CF"></a-sphere>
   </a-entity>
 
-  <a-text id="worldMessage" value="⚡ Press SPACEBAR, ENTER, or Click to Strike!" align="center" color="#F4E9CF" width="5.5"
+  <a-text id="worldMessage" value="🎯 Time your strike when pot reaches MIDDLE!" align="center" color="#F4E9CF" width="5.5"
           position="0 2.7 -1.9" visible="true"></a-text>
 
   <a-entity id="rig" position="0 0 1.2">
@@ -498,16 +495,16 @@
   const explicitTimeLimit = params.get('timeLimit');
 
   const DIFFICULTY_PRESETS = {
-    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 1.5 },
-    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.5 },
-    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 1.2 }
+    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, centerThreshold: 0.48 },
+    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, centerThreshold: 0.38 },
+    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, centerThreshold: 0.25 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
 
   window.MAYALI.preset = preset;
 
-  document.getElementById('configLine').textContent = `player: ${player} · difficulty: ${difficulty} · 3 hits to smash`;
+  document.getElementById('configLine').textContent = `player: ${player} · difficulty: ${difficulty} · 3 timed hits to smash`;
   document.getElementById('playerBadge').textContent = player.toUpperCase();
 
   let score = 0;
@@ -552,7 +549,7 @@
     timerLabel.textContent = timeLeft;
     window.MAYALI.timerActive = true;
     timerHandle = setInterval(tickTimer, 1000);
-    showMessage('Uri Adi! Press Space/Enter or Click!', 2200);
+    showMessage('🎯 Time your strike when pot reaches MIDDLE!', 2600);
   }
 
   function stopSwingAnimations() {
@@ -610,14 +607,13 @@
     }
   });
 
-  // GUARANTEED SWING ANIMATION & RELIABLE MULTI-HIT LOGIC
+  // PRECISION TIMED STRIKE LOGIC
   function performStrike() {
     if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
     SoundFX.playSwing();
 
     const rightHand = document.querySelector('#rightHand');
     if (rightHand) {
-      // Clear previous swing animation component to guarantee every click/keypress triggers a full bat swing!
       rightHand.removeAttribute('animation__strike');
       rightHand.setAttribute('position', '0.2 1.3 -0.4');
 
@@ -643,13 +639,26 @@
       }, 250);
     }
 
-    // Register strike hit logic after bat swing thrust forward (~110ms)
+    // Evaluate pot position precisely at the moment the bat hits forward (~110ms into swing)
     setTimeout(() => {
       if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
 
-      // On desktop/mobile, clicking or pressing Space/Enter is an explicit strike action.
-      // Register a pot hit on every intentional strike!
-      window.registerPotHit();
+      const potEntity = document.querySelector('#pot');
+      if (!potEntity || !potEntity.object3D) return;
+
+      const potWorldPos = new THREE.Vector3();
+      potEntity.object3D.getWorldPosition(potWorldPos);
+
+      // Pot alignment check: pot must be near middle (center X offset <= centerThreshold)
+      const isAlignedAtMiddle = Math.abs(potWorldPos.x) <= window.MAYALI.preset.centerThreshold;
+
+      if (isAlignedAtMiddle) {
+        window.registerPotHit();
+      } else {
+        if (Date.now() - lastHitTimestamp > 1000) {
+          showMessage('❌ MISSED! Time your strike when pot is in the MIDDLE!', 800);
+        }
+      }
     }, 110);
   }
 
