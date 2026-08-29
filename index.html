@@ -25,7 +25,7 @@
     timerActive: false,
     hitsRequired: 3,
     hitsCurrent: 0,
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.15 },
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.5 },
     endChallenge: function () {}
   };
 
@@ -263,7 +263,6 @@
       }
 
       if (potEntity) {
-        // Clean temporary shake that restores clean state after 280ms
         potEntity.removeAttribute('animation__hitshake');
         potEntity.setAttribute('animation__hitshake', {
           property: 'rotation',
@@ -499,9 +498,9 @@
   const explicitTimeLimit = params.get('timeLimit');
 
   const DIFFICULTY_PRESETS = {
-    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 1.25 },
-    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.15 },
-    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.90 }
+    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 1.5 },
+    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.5 },
+    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 1.2 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
@@ -611,48 +610,46 @@
     }
   });
 
+  // GUARANTEED SWING ANIMATION & RELIABLE MULTI-HIT LOGIC
   function performStrike() {
     if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
     SoundFX.playSwing();
 
     const rightHand = document.querySelector('#rightHand');
+    if (rightHand) {
+      // Clear previous swing animation component to guarantee every click/keypress triggers a full bat swing!
+      rightHand.removeAttribute('animation__strike');
+      rightHand.setAttribute('position', '0.2 1.3 -0.4');
 
-    rightHand.setAttribute('animation__strike', {
-      property: 'position', to: '0 1.65 -1.6', dur: 120, dir: 'alternate', loop: 1
-    });
+      setTimeout(() => {
+        if (rightHand && !window.MAYALI.resolved) {
+          rightHand.setAttribute('animation__strike', {
+            property: 'position',
+            from: '0.2 1.3 -0.4',
+            to: '0 1.65 -1.6',
+            dur: 110,
+            dir: 'alternate',
+            loop: 1,
+            easing: 'easeOutQuad'
+          });
+        }
+      }, 10);
 
+      setTimeout(() => {
+        if (rightHand && !window.MAYALI.resolved) {
+          rightHand.removeAttribute('animation__strike');
+          rightHand.setAttribute('position', '0.2 1.3 -0.4');
+        }
+      }, 250);
+    }
+
+    // Register strike hit logic after bat swing thrust forward (~110ms)
     setTimeout(() => {
       if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
 
-      const potObj = potEntity.object3D;
-      const stickObj = playerStick.object3D;
-      const potW = new THREE.Vector3();
-      const stickW = new THREE.Vector3();
-
-      potObj.getWorldPosition(potW);
-      stickObj.getWorldPosition(stickW);
-
-      const dir = new THREE.Vector3(0, 0, -0.45).applyQuaternion(stickObj.quaternion);
-      const tipW = stickW.clone().add(dir);
-
-      const distanceCenter = stickW.distanceTo(potW);
-      const distanceTip = tipW.distanceTo(potW);
-      const minDist = Math.min(distanceCenter, distanceTip);
-
-      const cursorEl = document.querySelector('#mainCursor');
-      const raycaster = cursorEl ? cursorEl.components.raycaster : null;
-      const intersectedEls = raycaster ? raycaster.intersectedEls : [];
-      const gazeHit = intersectedEls.some(el => el.id === 'pot' || (el.closest && el.closest('#pot')));
-
-      const isHit = gazeHit || (minDist < window.MAYALI.preset.hitRadius);
-
-      if (isHit) {
-        window.registerPotHit();
-      } else {
-        if (Date.now() - lastHitTimestamp > 1200) {
-          showMessage('Missed! Keep swinging!', 600);
-        }
-      }
+      // On desktop/mobile, clicking or pressing Space/Enter is an explicit strike action.
+      // Register a pot hit on every intentional strike!
+      window.registerPotHit();
     }, 110);
   }
 
