@@ -514,16 +514,17 @@
     to { opacity: 1; transform: translateY(0); }
   }
   #winModal .win-banner {
-    pointer-events: auto; background: rgba(24, 17, 12, 0.72); padding: 14px 34px;
+    pointer-events: auto; background: rgba(24, 17, 12, 0.78); padding: 16px 42px;
     border-radius: 30px; border: 2px solid #FFD700; backdrop-filter: blur(4px);
-    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); text-align: center;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.6); text-align: center;
   }
   #winModal h2 {
-    font-size: 3.2rem; color: #FFD700; margin: 0; letter-spacing: 0.08em;
-    text-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 3px 10px rgba(0,0,0,0.9);
+    font-size: 3.4rem; color: #FFD700; margin: 0; letter-spacing: 0.08em;
+    text-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 3px 10px rgba(0,0,0,0.9);
   }
   #winModal p {
-    font-size: 1.25rem; color: #E8871E; margin: 4px 0 0 0; font-weight: 700;
+    font-size: 1.85rem; color: #FFF; margin: 6px 0 0 0; font-weight: 800;
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 2px 8px rgba(0,0,0,0.9);
   }
   #winModal button {
     pointer-events: auto; padding: 14px 42px; font-size: 1.2rem; font-weight: 800;
@@ -569,7 +570,7 @@
 <div id="winModal">
   <div class="win-banner">
     <h2>🏆 YOU WON! 🏆</h2>
-    <p>🌸 Festival Victory! Pot Smashed! 🌸</p>
+    <p>അടി പൂക്കുറ്റി!! 🌸</p>
   </div>
   <button id="playAgainWinBtn">🔄 Play Again</button>
 </div>
@@ -978,8 +979,8 @@
           triggerPartyPopper();
           SoundFX.playVictoryFanfare();
           document.getElementById('winModal').style.display = 'flex';
-          showMessage('🌸 YOU WON! POO POTTICHU! 🌸', 6000);
-          document.getElementById('hitCounterLabel').textContent = 'YOU WON! 🏆';
+          showMessage('🌸 YOU WON! അടി പൂക്കുറ്റി!! 🌸', 6000);
+          document.getElementById('hitCounterLabel').textContent = 'അടി പൂക്കുറ്റി!! 🏆';
         }, 320);
 
       }, 450);
