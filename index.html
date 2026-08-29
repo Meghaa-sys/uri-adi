@@ -190,7 +190,7 @@
     }
   };
 
-  // 2D Screen Party Popper & Flower Rain Engine
+  // 2D Screen Continuous Party Popper & Flower Rain Engine
   function triggerPartyPopper() {
     let canvas = document.getElementById('victoryCanvas');
     if (!canvas) {
@@ -201,7 +201,7 @@
       canvas.style.width = '100vw';
       canvas.style.height = '100vh';
       canvas.style.pointerEvents = 'none';
-      canvas.style.zIndex = '999';
+      canvas.style.zIndex = '90';
       document.body.appendChild(canvas);
     }
     const ctx = canvas.getContext('2d');
@@ -212,20 +212,26 @@
     const colors = ['#FFD700', '#FF4500', '#E8871E', '#FF69B4', '#00FF7F', '#00BFFF', '#FFFFFF'];
     const shapes = ['circle', 'rect', 'petal'];
 
-    for (let i = 0; i < 180; i++) {
-      particles.push({
-        x: canvas.width / 2 + (Math.random() * 240 - 120),
-        y: canvas.height * 0.75,
-        vx: (Math.random() - 0.5) * 18,
-        vy: -Math.random() * 20 - 7,
-        size: Math.random() * 14 + 6,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        rotation: Math.random() * 360,
-        rSpeed: (Math.random() - 0.5) * 12,
-        shape: shapes[Math.floor(Math.random() * shapes.length)],
-        opacity: 1
-      });
+    function spawnBurst() {
+      for (let i = 0; i < 90; i++) {
+        particles.push({
+          x: canvas.width / 2 + (Math.random() * 260 - 130),
+          y: canvas.height * 0.8,
+          vx: (Math.random() - 0.5) * 16,
+          vy: -Math.random() * 18 - 6,
+          size: Math.random() * 14 + 6,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          rSpeed: (Math.random() - 0.5) * 10,
+          shape: shapes[Math.floor(Math.random() * shapes.length)],
+          opacity: 1
+        });
+      }
     }
+
+    spawnBurst();
+    const interval = setInterval(spawnBurst, 1200);
+    setTimeout(() => clearInterval(interval), 4000);
 
     function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -233,10 +239,10 @@
       particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.36;
+        p.vy += 0.32;
         p.vx *= 0.98;
         p.rotation += p.rSpeed;
-        p.opacity -= 0.005;
+        p.opacity -= 0.0035;
 
         if (p.opacity > 0) {
           alive = true;
@@ -260,7 +266,7 @@
           ctx.restore();
         }
       });
-      if (alive) requestAnimationFrame(animate);
+      if (alive || window.MAYALI.resolved) requestAnimationFrame(animate);
     }
     animate();
   }
@@ -478,28 +484,33 @@
     padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #FFF;
   }
 
-  /* Celebratory Victory Modal Overlay */
+  /* Celebratory Victory Header - Completely Transparent, Non-Obscuring Background */
   #winModal {
     position: fixed; inset: 0; z-index: 100; display: none; flex-direction: column;
-    align-items: center; justify-content: center; text-align: center; gap: 16px;
-    background: rgba(18, 12, 9, 0.88); backdrop-filter: blur(12px); color: #F4E9CF;
-    animation: fadeInModal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.27) forwards;
+    align-items: center; justify-content: space-between; padding: 24px 20px 36px 20px;
+    background: transparent; pointer-events: none;
+    animation: fadeInModal 0.6s ease-out forwards;
   }
   @keyframes fadeInModal {
-    from { opacity: 0; transform: scale(0.85); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #winModal .win-banner {
+    pointer-events: auto; background: rgba(24, 17, 12, 0.72); padding: 14px 34px;
+    border-radius: 30px; border: 2px solid #FFD700; backdrop-filter: blur(4px);
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); text-align: center;
   }
   #winModal h2 {
-    font-size: 3.8rem; color: #FFD700; margin: 0; letter-spacing: 0.08em;
-    text-shadow: 0 0 25px rgba(255, 215, 0, 0.75), 0 4px 12px rgba(0,0,0,0.9);
+    font-size: 3.2rem; color: #FFD700; margin: 0; letter-spacing: 0.08em;
+    text-shadow: 0 0 25px rgba(255, 215, 0, 0.8), 0 3px 10px rgba(0,0,0,0.9);
   }
   #winModal p {
-    font-size: 1.4rem; color: #E8871E; margin: 0; font-weight: 700;
+    font-size: 1.25rem; color: #E8871E; margin: 4px 0 0 0; font-weight: 700;
   }
   #winModal button {
-    margin-top: 14px; padding: 14px 42px; font-size: 1.2rem; font-weight: 800;
+    pointer-events: auto; padding: 14px 42px; font-size: 1.2rem; font-weight: 800;
     border-radius: 999px; border: 2px solid #FFD700; background: linear-gradient(135deg, #E8871E, #B5502F);
-    color: #FFF; cursor: pointer; box-shadow: 0 6px 24px rgba(232, 135, 30, 0.5);
+    color: #FFF; cursor: pointer; box-shadow: 0 6px 24px rgba(232, 135, 30, 0.6);
     transition: all 0.25s ease;
   }
   #winModal button:hover {
@@ -538,8 +549,10 @@
 </div>
 
 <div id="winModal">
-  <h2>🏆 YOU WON! 🏆</h2>
-  <p>🌸 Festival Victory! Pot Smashed! 🌸</p>
+  <div class="win-banner">
+    <h2>🏆 YOU WON! 🏆</h2>
+    <p>🌸 Festival Victory! Pot Smashed! 🌸</p>
+  </div>
   <button id="playAgainWinBtn">🔄 Play Again</button>
 </div>
 
@@ -590,18 +603,18 @@
     </a-entity>
   </a-entity>
 
-  <!-- Sun Asset inside pot that rises upon pot dropping to floor -->
-  <a-image id="sunAsset" src="#sunAssetImg" position="0 0.2 -2.2" width="1.65" height="1.65" visible="false"
+  <!-- Sun Asset inside pot that SLOWLY rises and reveals itself upon pot dropping to floor -->
+  <a-image id="sunAsset" src="#sunAssetImg" position="0 0.1 -2.2" width="1.75" height="1.75" visible="false"
            material="transparent: true; alphaTest: 0.05"></a-image>
 
   <!-- 3D Flower Petals Burst Entity -->
-  <a-entity id="flowerPetals" visible="false" position="0 0.5 -2.2">
-    <a-sphere position="-0.3 0.4 0.1" radius="0.09" color="#FFD700"></a-sphere>
-    <a-sphere position="0.35 0.2 -0.1" radius="0.10" color="#FF4500"></a-sphere>
-    <a-sphere position="-0.2 -0.2 0.25" radius="0.11" color="#FF69B4"></a-sphere>
-    <a-sphere position="0.22 -0.3 -0.2" radius="0.08" color="#C9A227"></a-sphere>
-    <a-sphere position="0 0.5 -0.15" radius="0.10" color="#FFFFFF"></a-sphere>
-    <a-sphere position="-0.4 -0.1 -0.1" radius="0.09" color="#E8871E"></a-sphere>
+  <a-entity id="flowerPetals" visible="false" position="0 0.4 -2.2">
+    <a-sphere position="-0.35 0.4 0.1" radius="0.10" color="#FFD700"></a-sphere>
+    <a-sphere position="0.4 0.25 -0.1" radius="0.11" color="#FF4500"></a-sphere>
+    <a-sphere position="-0.25 -0.2 0.25" radius="0.12" color="#FF69B4"></a-sphere>
+    <a-sphere position="0.25 -0.3 -0.2" radius="0.09" color="#C9A227"></a-sphere>
+    <a-sphere position="0 0.6 -0.15" radius="0.11" color="#FFFFFF"></a-sphere>
+    <a-sphere position="-0.45 -0.1 -0.1" radius="0.10" color="#E8871E"></a-sphere>
   </a-entity>
 
   <a-text id="worldMessage" value="🎯 Time your strike when pot reaches MIDDLE!" align="center" color="#F4E9CF" width="5.5"
@@ -716,69 +729,79 @@
         potEntity.setAttribute('animation__drop', {
           property: 'position',
           to: '0 -2.6 0',
-          dur: 600,
+          dur: 700,
           easing: 'easeInQuad'
         });
       }
 
-      // 2. Smash sound upon hitting the floor, then Sun Asset & Flowers emerge
+      // 2. Smash sound upon hitting the floor, then Sun Asset & Flowers emerge slowly
       setTimeout(() => {
         SoundFX.playSmash();
 
-        // 3. Sun Asset emerges from pot and rises into the air
+        // 3. Sun Asset SLOWLY emerges from inside the pot (over 3.8 seconds) revealing itself like a magical artifact
         if (sunAsset) {
           sunAsset.setAttribute('visible', true);
-          sunAsset.setAttribute('position', '0 0.3 -2.2');
-          sunAsset.setAttribute('scale', '0.25 0.25 0.25');
+          sunAsset.setAttribute('position', '0 0.1 -2.2');
+          sunAsset.setAttribute('scale', '0.05 0.05 0.05');
 
           sunAsset.setAttribute('animation__rise', {
             property: 'position',
-            from: '0 0.3 -2.2',
-            to: '0 2.2 -2.2',
-            dur: 1600,
-            easing: 'easeOutBack'
+            from: '0 0.1 -2.2',
+            to: '0 2.1 -2.2',
+            dur: 3800,
+            easing: 'easeOutQuad'
           });
 
           sunAsset.setAttribute('animation__scale', {
             property: 'scale',
-            from: '0.25 0.25 0.25',
-            to: '1.25 1.25 1.25',
-            dur: 1600,
-            easing: 'easeOutBack'
+            from: '0.05 0.05 0.05',
+            to: '1.45 1.45 1.45',
+            dur: 3800,
+            easing: 'easeOutQuad'
           });
 
           sunAsset.setAttribute('animation__pulse', {
             property: 'rotation',
-            from: '0 0 -8',
-            to: '0 0 8',
-            dur: 1200,
+            from: '0 0 -10',
+            to: '0 0 10',
+            dur: 1500,
             dir: 'alternate',
             loop: true,
             easing: 'easeInOutSine'
           });
         }
 
-        // 4. Flowers burst out with the asset
+        // 4. Flowers float upward slowly with the sun asset
         if (flowerPetals) {
           flowerPetals.setAttribute('visible', true);
+          flowerPetals.setAttribute('position', '0 0.4 -2.2');
+
+          flowerPetals.setAttribute('animation__flowerRise', {
+            property: 'position',
+            from: '0 0.4 -2.2',
+            to: '0 2.1 -2.2',
+            dur: 4000,
+            easing: 'easeOutQuad'
+          });
+
           flowerPetals.setAttribute('animation__burst', {
             property: 'scale',
             from: '0.2 0.2 0.2',
-            to: '2.8 2.8 2.8',
-            dur: 1400,
+            to: '3.2 3.2 3.2',
+            dur: 4000,
             easing: 'easeOutQuad'
           });
         }
 
-        // 5. Party popper confetti on screen + Victory Fanfare
+        // 5. Trigger Screen Confetti Popper & Victory Fanfare
         triggerPartyPopper();
         SoundFX.playVictoryFanfare();
 
-        // 6. Display YOU WON Screen
+        // 6. Display YOU WON Transparent Screen Header
         document.getElementById('winModal').style.display = 'flex';
-        showMessage('🌸 YOU WON! POO POTTICHU! 🌸', 6000);
+        showMessage('🌸 DIVINE REVEAL — YOU WON! 🌸', 6000);
         document.getElementById('hitCounterLabel').textContent = 'YOU WON! 🏆';
-      }, 550);
+      }, 650);
     } else {
       showMessage("Time's up! The pot survived.", 3500);
     }
