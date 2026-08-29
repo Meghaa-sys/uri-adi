@@ -5,9 +5,20 @@
 <title>MĀYĀLI — Real Uri Adi VR Festival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <meta name="description" content="Multi-strike Uri Adi pot hitting simulation with continuous keyboard/mouse/VR hitting, guaranteed 3-strike shatter, eye-level pot swinging, ceramic cracking, and particle victory!" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍯</text></svg>" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
 <script>
+  // Patch THREE.WebGLRenderer useLegacyLights deprecation warning
+  if (window.THREE && window.THREE.WebGLRenderer) {
+    Object.defineProperty(window.THREE.WebGLRenderer.prototype, 'useLegacyLights', {
+      get: function () { return this._useLegacyLights !== undefined ? this._useLegacyLights : false; },
+      set: function (val) { this._useLegacyLights = val; },
+      configurable: true,
+      enumerable: false
+    });
+  }
+
   // Shared global game state with Multi-Hit Pot Durability
   window.MAYALI = {
     resolved: false,
