@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <title>MĀYĀLI — Real Uri Adi VR Festival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta name="description" content="Multi-strike 3D Uri Adi festival pot hitting challenge with realistic swing physics, Quest 3 VR support, ceramic cracking, and particle shatter victory!" />
+<meta name="description" content="Continuous multi-strike 3D Uri Adi festival pot hitting challenge with Quest 3 VR 6DoF controller haptics, realistic swing physics, ceramic cracking, and particle shatter victory!" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
 <script>
@@ -15,8 +15,7 @@
     stickGrabbed: true,
     hitsRequired: 3,
     hitsCurrent: 0,
-    canStrike: true,
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.40 },
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.45 },
     endChallenge: function () {}
   };
 
@@ -106,16 +105,16 @@
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+      osc.frequency.setValueAtTime(340, now);
+      osc.frequency.exponentialRampToValueAtTime(75, now + 0.16);
 
-      gain.gain.setValueAtTime(0.7, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      gain.gain.setValueAtTime(0.75, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.15);
+      osc.stop(now + 0.16);
     },
 
     playSmash() {
@@ -181,14 +180,27 @@
     }
   };
 
-  // Skill-Based Meta Quest 3 VR Physics Component (Supports Multiple Strikes)
+  let lastHitTimestamp = 0;
+
+  // Trigger VR Controller Vibration Haptics
+  function triggerControllerHaptics() {
+    try {
+      const rightHand = document.querySelector('#rightHand');
+      if (rightHand && rightHand.components && rightHand.components['oculus-touch-controls']) {
+        const controller = rightHand.components['oculus-touch-controls'].controller;
+        if (controller && controller.gamepad && controller.gamepad.hapticActuators && controller.gamepad.hapticActuators[0]) {
+          controller.gamepad.hapticActuators[0].pulse(0.85, 140);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Meta Quest 3 VR 6DoF Controller Physics Component (Continuous Rapid Swinging)
   AFRAME.registerComponent('stick-swing', {
     init: function () {
       this.centerWorldPos = new THREE.Vector3();
       this.tipWorldPos = new THREE.Vector3();
       this.potWorldPos = new THREE.Vector3();
-      this.lastPos = new THREE.Vector3();
-      this.velocity = new THREE.Vector3();
       this.lastHitTime = 0;
     },
     tick: function (time, delta) {
@@ -209,13 +221,10 @@
       const distTip = this.tipWorldPos.distanceTo(this.potWorldPos);
       const minDist = Math.min(distCenter, distTip);
 
-      this.velocity.copy(this.centerWorldPos).sub(this.lastPos);
-      this.lastPos.copy(this.centerWorldPos);
-      const speed = delta > 0 ? (this.velocity.length() / (delta / 1000)) : 0;
-
-      // Check hit condition with 350ms cooldown between strikes
-      if (minDist < state.preset.hitRadius && speed > 0.45 && (time - this.lastHitTime > 350)) {
+      // Fast continuous hitting (220ms cooldown between swings)
+      if (minDist < state.preset.hitRadius * 1.6 && (time - this.lastHitTime > 220)) {
         this.lastHitTime = time;
+        triggerControllerHaptics();
         registerPotHit();
       }
     }
@@ -226,29 +235,33 @@
     const state = window.MAYALI;
     if (state.resolved) return;
 
+    lastHitTimestamp = Date.now();
     state.hitsCurrent += 1;
     const potEntity = document.querySelector('#pot');
     const remaining = state.hitsRequired - state.hitsCurrent;
 
     if (state.hitsCurrent < state.hitsRequired) {
-      // Crack hit feedback
       SoundFX.playImpactCrack();
       
-      // Visual pot shake animation
+      const potSphere = potEntity ? potEntity.querySelector('a-sphere') : null;
+      if (potSphere) {
+        if (state.hitsCurrent === 1) potSphere.setAttribute('color', '#A04226');
+        if (state.hitsCurrent === 2) potSphere.setAttribute('color', '#7E2E17');
+      }
+
       if (potEntity) {
         potEntity.setAttribute('animation__hitshake', {
           property: 'rotation',
-          to: '15 10 -15',
-          dur: 80,
+          to: '22 18 -22',
+          dur: 85,
           dir: 'alternate',
           loop: 2
         });
       }
 
-      window.showMessage(`💥 HIT! (${state.hitsCurrent}/${state.hitsRequired}) — ${remaining} more to break!`, 900);
+      window.showMessage(`💥 HIT ${state.hitsCurrent}/${state.hitsRequired}! ${remaining} MORE TO BREAK!`, 1400);
       document.getElementById('hitCounterLabel').textContent = `Hits: ${state.hitsCurrent}/${state.hitsRequired}`;
     } else {
-      // Final Smash!
       state.endChallenge(true);
     }
   }
@@ -346,8 +359,8 @@
     🏏 <strong>Multi-Strike Challenge Rules:</strong>
     <ul>
       <li>Strike the swinging pot <strong>3 times</strong> to shatter it!</li>
-      <li><strong>Meta Quest 3:</strong> Keep swinging your VR controller to hit repeatedly.</li>
-      <li><strong>Desktop/Mobile:</strong> Click/tap multiple times as the pot swings near center!</li>
+      <li><strong>Meta Quest 3:</strong> Keep swinging your VR controller to hit continuously.</li>
+      <li><strong>Desktop/Mobile:</strong> Click/tap multiple times as the pot sways near center!</li>
     </ul>
   </div>
 
@@ -464,8 +477,8 @@
 
   const DIFFICULTY_PRESETS = {
     easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.48 },
-    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.40 },
-    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.30 }
+    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.45 },
+    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.32 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
@@ -575,7 +588,6 @@
     }
   });
 
-  // MULTIPLE STRIKES LISTENER (DESKTOP & MOBILE)
   document.querySelector('a-scene').addEventListener('click', () => {
     if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
     SoundFX.playSwing();
@@ -604,10 +616,14 @@
       const distanceTip = tipW.distanceTo(potW);
       const minDist = Math.min(distanceCenter, distanceTip);
 
-      if (minDist < window.MAYALI.preset.hitRadius) {
+      const isHit = minDist < window.MAYALI.preset.hitRadius * 1.6;
+
+      if (isHit) {
         window.registerPotHit();
       } else {
-        showMessage('Missed! Keep swinging!', 600);
+        if (Date.now() - lastHitTimestamp > 1200) {
+          showMessage('Missed! Keep swinging!', 600);
+        }
       }
     }, 110);
   });
