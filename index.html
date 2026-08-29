@@ -539,6 +539,9 @@
 </head>
 <body>
 
+<!-- Victory Audio Element for Asset Reveal Music -->
+<audio id="victoryMusic" src="victory_music.mp3" preload="auto"></audio>
+
 <div id="startOverlay">
   <div class="subtitle">Experience the Real Uri Adi through VR</div>
   <h1>അടി പൂക്കുറ്റി</h1>
@@ -917,6 +920,13 @@
 
         // 4. AFTER pot breaks & small flowers explode, Sun Asset POPS UP from broken shards!
         setTimeout(() => {
+          // Play background victory music track when asset pops up!
+          const victoryMusic = document.getElementById('victoryMusic');
+          if (victoryMusic) {
+            victoryMusic.currentTime = 0;
+            victoryMusic.play().catch(e => console.log('Victory music play deferred:', e));
+          }
+
           if (sunAsset) {
             sunAsset.setAttribute('visible', true);
             sunAsset.setAttribute('position', '0 0.1 -2.2');
