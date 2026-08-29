@@ -190,6 +190,83 @@
     }
   };
 
+  // 2D Screen Party Popper & Flower Rain Engine
+  function triggerPartyPopper() {
+    let canvas = document.getElementById('victoryCanvas');
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      canvas.id = 'victoryCanvas';
+      canvas.style.position = 'fixed';
+      canvas.style.inset = '0';
+      canvas.style.width = '100vw';
+      canvas.style.height = '100vh';
+      canvas.style.pointerEvents = 'none';
+      canvas.style.zIndex = '999';
+      document.body.appendChild(canvas);
+    }
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const colors = ['#FFD700', '#FF4500', '#E8871E', '#FF69B4', '#00FF7F', '#00BFFF', '#FFFFFF'];
+    const shapes = ['circle', 'rect', 'petal'];
+
+    for (let i = 0; i < 180; i++) {
+      particles.push({
+        x: canvas.width / 2 + (Math.random() * 240 - 120),
+        y: canvas.height * 0.75,
+        vx: (Math.random() - 0.5) * 18,
+        vy: -Math.random() * 20 - 7,
+        size: Math.random() * 14 + 6,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        rSpeed: (Math.random() - 0.5) * 12,
+        shape: shapes[Math.floor(Math.random() * shapes.length)],
+        opacity: 1
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.36;
+        p.vx *= 0.98;
+        p.rotation += p.rSpeed;
+        p.opacity -= 0.005;
+
+        if (p.opacity > 0) {
+          alive = true;
+          ctx.save();
+          ctx.globalAlpha = Math.max(p.opacity, 0);
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+
+          if (p.shape === 'rect') {
+            ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+          } else if (p.shape === 'circle') {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.size / 2, p.size / 4, Math.PI / 4, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      });
+      if (alive) requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+  window.triggerPartyPopper = triggerPartyPopper;
+
   let lastHitTimestamp = 0;
   let lastHitTimeDebounce = 0;
 
@@ -207,7 +284,7 @@
     } catch (e) {}
   }
 
-  // Meta Quest 3 VR 6DoF Controller Physics & Complete Button Event Mapping
+  // Meta Quest 3 VR 6DoF Controller Physics Component
   AFRAME.registerComponent('stick-swing', {
     init: function () {
       this.centerWorldPos = new THREE.Vector3();
@@ -222,7 +299,6 @@
         }
       };
 
-      // Map all VR Controller interaction events (Trigger, Grip, A/B/X/Y buttons, Select)
       el.addEventListener('triggerdown', onVrAction);
       el.addEventListener('gripdown', onVrAction);
       el.addEventListener('selectstart', onVrAction);
@@ -240,7 +316,6 @@
 
       potEntity.object3D.getWorldPosition(this.potWorldPos);
 
-      // Check center alignment window
       const isAlignedAtMiddle = Math.abs(this.potWorldPos.x) <= state.preset.centerThreshold;
       if (!isAlignedAtMiddle) return;
 
@@ -255,7 +330,6 @@
       const distTip = this.tipWorldPos.distanceTo(this.potWorldPos);
       const minDist = Math.min(distCenter, distTip);
 
-      // VR Hit Radius tuned to 2.8m to accurately support Quest 3 roomscale extension
       if (minDist < 2.8 && (time - this.lastVRHitTime > 220)) {
         const raycaster = this.el.components.raycaster;
         const intersectedEls = raycaster ? raycaster.intersectedEls : [];
@@ -270,13 +344,13 @@
     }
   });
 
-  // Robust Multi-Hit Handler with Reset Shake Animation
+  // Multi-Hit Handler with Reset Shake Animation
   function registerPotHit() {
     const state = window.MAYALI;
     if (state.resolved) return;
 
     const now = Date.now();
-    if (now - lastHitTimeDebounce < 220) return; // Prevent double-trigger within 220ms
+    if (now - lastHitTimeDebounce < 220) return;
     lastHitTimeDebounce = now;
     lastHitTimestamp = now;
 
@@ -403,6 +477,34 @@
     background: rgba(201, 162, 39, 0.25); border: 1px solid #C9A227;
     padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #FFF;
   }
+
+  /* Celebratory Victory Modal Overlay */
+  #winModal {
+    position: fixed; inset: 0; z-index: 100; display: none; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; gap: 16px;
+    background: rgba(18, 12, 9, 0.88); backdrop-filter: blur(12px); color: #F4E9CF;
+    animation: fadeInModal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.27) forwards;
+  }
+  @keyframes fadeInModal {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  #winModal h2 {
+    font-size: 3.8rem; color: #FFD700; margin: 0; letter-spacing: 0.08em;
+    text-shadow: 0 0 25px rgba(255, 215, 0, 0.75), 0 4px 12px rgba(0,0,0,0.9);
+  }
+  #winModal p {
+    font-size: 1.4rem; color: #E8871E; margin: 0; font-weight: 700;
+  }
+  #winModal button {
+    margin-top: 14px; padding: 14px 42px; font-size: 1.2rem; font-weight: 800;
+    border-radius: 999px; border: 2px solid #FFD700; background: linear-gradient(135deg, #E8871E, #B5502F);
+    color: #FFF; cursor: pointer; box-shadow: 0 6px 24px rgba(232, 135, 30, 0.5);
+    transition: all 0.25s ease;
+  }
+  #winModal button:hover {
+    transform: scale(1.06); background: linear-gradient(135deg, #FFD700, #E8871E);
+  }
 </style>
 </head>
 <body>
@@ -435,7 +537,16 @@
   </div>
 </div>
 
+<div id="winModal">
+  <h2>🏆 YOU WON! 🏆</h2>
+  <p>🌸 Festival Victory! Pot Smashed! 🌸</p>
+  <button id="playAgainWinBtn">🔄 Play Again</button>
+</div>
+
 <a-scene background="color: #160e08" vr-mode-ui="enabled: true">
+  <a-assets>
+    <img id="sunAssetImg" src="sun_asset.jpg" />
+  </a-assets>
 
   <a-sky color="#25152B"></a-sky>
   <a-entity geometry="primitive: sphere; radius: 65; segmentsHeight: 16"
@@ -469,7 +580,7 @@
       <!-- Dynamic Rope -->
       <a-cylinder id="rope" position="0 -0.55 0" radius="0.013" height="1.1" color="#6e4f32"></a-cylinder>
       
-      <!-- Terracotta Clay Curd Pot (Hangs Eye-Level Y ≈ 1.7m - 1.9m) -->
+      <!-- Terracotta Clay Curd Pot -->
       <a-entity id="pot" class="clickable" position="0 -1.45 0">
         <a-sphere radius="0.34" color="#B5502F" roughness="0.9"></a-sphere>
         <a-cylinder position="0 0.28 0" radius="0.13" height="0.15" color="#8f3f22"></a-cylinder>
@@ -479,20 +590,18 @@
     </a-entity>
   </a-entity>
 
-  <a-entity id="shards" visible="false" position="0 1.8 -2.2">
-    <a-cone id="shard1" position="-0.22 0.12 0" radius-bottom="0.19" height="0.25" color="#B5502F" rotation="20 10 45"></a-cone>
-    <a-cone id="shard2" position="0.24 0.06 0.12" radius-bottom="0.17" height="0.22" color="#8f3f22" rotation="-30 40 -35"></a-cone>
-    <a-sphere id="shard3" position="0 -0.15 -0.08" radius="0.11" color="#E8871E"></a-sphere>
-    <a-cone id="shard4" position="-0.12 -0.22 0.15" radius-bottom="0.13" height="0.18" color="#B5502F" rotation="60 -20 15"></a-cone>
-  </a-entity>
+  <!-- Sun Asset inside pot that rises upon pot dropping to floor -->
+  <a-image id="sunAsset" src="#sunAssetImg" position="0 0.2 -2.2" width="1.65" height="1.65" visible="false"
+           material="transparent: true; alphaTest: 0.05"></a-image>
 
-  <a-entity id="particleBurst" visible="false" position="0 1.8 -2.2">
-    <a-sphere position="-0.2 0.25 0.1" radius="0.07" color="#F4E9CF"></a-sphere>
-    <a-sphere position="0.25 0.18 -0.1" radius="0.08" color="#E8871E"></a-sphere>
-    <a-sphere position="-0.15 -0.1 0.22" radius="0.09" color="#FFF"></a-sphere>
-    <a-sphere position="0.12 -0.28 -0.15" radius="0.06" color="#C9A227"></a-sphere>
-    <a-sphere position="0 0.32 -0.2" radius="0.08" color="#B5502F"></a-sphere>
-    <a-sphere position="-0.32 -0.05 -0.1" radius="0.07" color="#F4E9CF"></a-sphere>
+  <!-- 3D Flower Petals Burst Entity -->
+  <a-entity id="flowerPetals" visible="false" position="0 0.5 -2.2">
+    <a-sphere position="-0.3 0.4 0.1" radius="0.09" color="#FFD700"></a-sphere>
+    <a-sphere position="0.35 0.2 -0.1" radius="0.10" color="#FF4500"></a-sphere>
+    <a-sphere position="-0.2 -0.2 0.25" radius="0.11" color="#FF69B4"></a-sphere>
+    <a-sphere position="0.22 -0.3 -0.2" radius="0.08" color="#C9A227"></a-sphere>
+    <a-sphere position="0 0.5 -0.15" radius="0.10" color="#FFFFFF"></a-sphere>
+    <a-sphere position="-0.4 -0.1 -0.1" radius="0.09" color="#E8871E"></a-sphere>
   </a-entity>
 
   <a-text id="worldMessage" value="🎯 Time your strike when pot reaches MIDDLE!" align="center" color="#F4E9CF" width="5.5"
@@ -554,9 +663,8 @@
   const potPivot = document.querySelector('#potPivot');
   const potTug = document.querySelector('#potTug');
   const potEntity = document.querySelector('#pot');
-  const shards = document.querySelector('#shards');
-  const particleBurst = document.querySelector('#particleBurst');
-  const playerStick = document.querySelector('#rightHand .stick');
+  const sunAsset = document.querySelector('#sunAsset');
+  const flowerPetals = document.querySelector('#flowerPetals');
 
   creakInterval = setInterval(() => {
     if (!window.MAYALI.resolved) {
@@ -603,23 +711,74 @@
     stopSwingAnimations();
 
     if (success) {
-      potPivot.setAttribute('visible', false);
-      shards.setAttribute('visible', true);
-      particleBurst.setAttribute('visible', true);
+      // 1. Pot drops down to the floor
+      if (potEntity) {
+        potEntity.setAttribute('animation__drop', {
+          property: 'position',
+          to: '0 -2.6 0',
+          dur: 600,
+          easing: 'easeInQuad'
+        });
+      }
 
-      shards.setAttribute('animation__shatter', {
-        property: 'scale', from: '1 1 1', to: '2.4 2.4 2.4', dur: 600, easing: 'easeOutExpo'
-      });
+      // 2. Smash sound upon hitting the floor, then Sun Asset & Flowers emerge
+      setTimeout(() => {
+        SoundFX.playSmash();
 
-      particleBurst.setAttribute('animation__burst', {
-        property: 'scale', from: '0.5 0.5 0.5', to: '3.5 3.5 3.5', dur: 800, easing: 'easeOutQuad'
-      });
+        // 3. Sun Asset emerges from pot and rises into the air
+        if (sunAsset) {
+          sunAsset.setAttribute('visible', true);
+          sunAsset.setAttribute('position', '0 0.3 -2.2');
+          sunAsset.setAttribute('scale', '0.25 0.25 0.25');
 
-      SoundFX.playSmash();
-      SoundFX.playVictoryFanfare();
+          sunAsset.setAttribute('animation__rise', {
+            property: 'position',
+            from: '0 0.3 -2.2',
+            to: '0 2.2 -2.2',
+            dur: 1600,
+            easing: 'easeOutBack'
+          });
 
-      showMessage('🌸 POO POTTICHU! REAL WIN! 🌸', 5000);
-      document.getElementById('hitCounterLabel').textContent = 'POT SMASHED! 🏆';
+          sunAsset.setAttribute('animation__scale', {
+            property: 'scale',
+            from: '0.25 0.25 0.25',
+            to: '1.25 1.25 1.25',
+            dur: 1600,
+            easing: 'easeOutBack'
+          });
+
+          sunAsset.setAttribute('animation__pulse', {
+            property: 'rotation',
+            from: '0 0 -8',
+            to: '0 0 8',
+            dur: 1200,
+            dir: 'alternate',
+            loop: true,
+            easing: 'easeInOutSine'
+          });
+        }
+
+        // 4. Flowers burst out with the asset
+        if (flowerPetals) {
+          flowerPetals.setAttribute('visible', true);
+          flowerPetals.setAttribute('animation__burst', {
+            property: 'scale',
+            from: '0.2 0.2 0.2',
+            to: '2.8 2.8 2.8',
+            dur: 1400,
+            easing: 'easeOutQuad'
+          });
+        }
+
+        // 5. Party popper confetti on screen + Victory Fanfare
+        triggerPartyPopper();
+        SoundFX.playVictoryFanfare();
+
+        // 6. Display YOU WON Screen
+        document.getElementById('winModal').style.display = 'flex';
+        showMessage('🌸 YOU WON! POO POTTICHU! 🌸', 6000);
+        document.getElementById('hitCounterLabel').textContent = 'YOU WON! 🏆';
+      }, 550);
     } else {
       showMessage("Time's up! The pot survived.", 3500);
     }
@@ -630,6 +789,10 @@
   document.getElementById('beginBtn').addEventListener('click', enterFestivalArena);
 
   document.getElementById('restartBtn').addEventListener('click', () => {
+    window.location.reload();
+  });
+
+  document.getElementById('playAgainWinBtn').addEventListener('click', () => {
     window.location.reload();
   });
 
