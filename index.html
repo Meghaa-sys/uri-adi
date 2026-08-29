@@ -195,21 +195,41 @@
 
   function triggerControllerHaptics() {
     try {
-      const rightHand = document.querySelector('#rightHand');
-      if (rightHand && rightHand.components && rightHand.components['oculus-touch-controls']) {
-        const controller = rightHand.components['oculus-touch-controls'].controller;
-        if (controller && controller.gamepad && controller.gamepad.hapticActuators && controller.gamepad.hapticActuators[0]) {
-          controller.gamepad.hapticActuators[0].pulse(0.85, 140);
+      const hands = [document.querySelector('#rightHand'), document.querySelector('#leftHand')];
+      hands.forEach(hand => {
+        if (hand && hand.components && hand.components['oculus-touch-controls']) {
+          const controller = hand.components['oculus-touch-controls'].controller;
+          if (controller && controller.gamepad && controller.gamepad.hapticActuators && controller.gamepad.hapticActuators[0]) {
+            controller.gamepad.hapticActuators[0].pulse(0.85, 140);
+          }
         }
-      }
+      });
     } catch (e) {}
   }
 
-  // Meta Quest 3 VR 6DoF Controller Physics Component
+  // Meta Quest 3 VR 6DoF Controller Physics & Complete Button Event Mapping
   AFRAME.registerComponent('stick-swing', {
     init: function () {
+      this.centerWorldPos = new THREE.Vector3();
+      this.tipWorldPos = new THREE.Vector3();
       this.potWorldPos = new THREE.Vector3();
       this.lastVRHitTime = 0;
+
+      const el = this.el;
+      const onVrAction = () => {
+        if (window.MAYALI && window.MAYALI.timerActive && !window.MAYALI.resolved) {
+          performStrike();
+        }
+      };
+
+      // Map all VR Controller interaction events (Trigger, Grip, A/B/X/Y buttons, Select)
+      el.addEventListener('triggerdown', onVrAction);
+      el.addEventListener('gripdown', onVrAction);
+      el.addEventListener('selectstart', onVrAction);
+      el.addEventListener('abuttondown', onVrAction);
+      el.addEventListener('bbuttondown', onVrAction);
+      el.addEventListener('xbuttondown', onVrAction);
+      el.addEventListener('ybuttondown', onVrAction);
     },
     tick: function (time, delta) {
       const state = window.MAYALI;
@@ -220,17 +240,31 @@
 
       potEntity.object3D.getWorldPosition(this.potWorldPos);
 
-      // In VR physical swinging, hit registers when pot is near center AND VR stick is near pot
-      if (Math.abs(this.potWorldPos.x) <= state.preset.centerThreshold && (time - this.lastVRHitTime > 250)) {
-        const stick = this.el.querySelector('.stick');
-        if (stick && stick.object3D) {
-          const stickW = new THREE.Vector3();
-          stick.object3D.getWorldPosition(stickW);
-          if (stickW.distanceTo(this.potWorldPos) < 1.4) {
-            this.lastVRHitTime = time;
-            triggerControllerHaptics();
-            registerPotHit();
-          }
+      // Check center alignment window
+      const isAlignedAtMiddle = Math.abs(this.potWorldPos.x) <= state.preset.centerThreshold;
+      if (!isAlignedAtMiddle) return;
+
+      const stick = this.el.querySelector('.stick') || this.el;
+      if (!stick || !stick.object3D) return;
+
+      stick.object3D.getWorldPosition(this.centerWorldPos);
+      const dir = new THREE.Vector3(0, 0, -0.6).applyQuaternion(stick.object3D.quaternion);
+      this.tipWorldPos.copy(this.centerWorldPos).add(dir);
+
+      const distCenter = this.centerWorldPos.distanceTo(this.potWorldPos);
+      const distTip = this.tipWorldPos.distanceTo(this.potWorldPos);
+      const minDist = Math.min(distCenter, distTip);
+
+      // VR Hit Radius tuned to 2.8m to accurately support Quest 3 roomscale extension
+      if (minDist < 2.8 && (time - this.lastVRHitTime > 220)) {
+        const raycaster = this.el.components.raycaster;
+        const intersectedEls = raycaster ? raycaster.intersectedEls : [];
+        const isPointingPot = intersectedEls.some(e => e.id === 'pot' || (e.closest && e.closest('#pot')));
+
+        if (isPointingPot || minDist < 2.3) {
+          this.lastVRHitTime = time;
+          triggerControllerHaptics();
+          registerPotHit();
         }
       }
     }
@@ -383,7 +417,7 @@
     <ul>
       <li><strong>Keyboard:</strong> Press <span class="key-badge">Spacebar</span>, <span class="key-badge">Enter</span>, <span class="key-badge">X</span>, or <span class="key-badge">F</span> when the pot is in the center!</li>
       <li><strong>Mouse/Touch:</strong> Click or tap when the swinging pot aligns at the middle.</li>
-      <li><strong>Meta Quest 3 VR:</strong> Swing physical controller when pot reaches center.</li>
+      <li><strong>Meta Quest 3 VR:</strong> Swing controller or press Trigger/Grip when pot reaches center.</li>
     </ul>
   </div>
 
@@ -469,10 +503,11 @@
       <a-cursor id="mainCursor" color="#E8871E" raycaster="objects: .clickable" fuse="false"></a-cursor>
     </a-camera>
 
-    <!-- Player Right Hand & Wooden Stick Aligned for Eye-Level Strike -->
+    <!-- Player Controllers with Full VR Gesture, Button, and Physical Swing Mapping -->
     <a-entity id="rightHand"
               oculus-touch-controls="hand: right"
               laser-controls="hand: right"
+              raycaster="objects: .clickable; far: 10"
               stick-swing
               position="0.2 1.3 -0.4">
       <a-cylinder class="stick" visible="true" radius="0.025" height="0.9" color="#C9A227"
@@ -482,7 +517,9 @@
 
     <a-entity id="leftHand"
               oculus-touch-controls="hand: left"
-              laser-controls="hand: left"></a-entity>
+              laser-controls="hand: left"
+              raycaster="objects: .clickable; far: 10"
+              stick-swing></a-entity>
   </a-entity>
 
 </a-scene>
@@ -653,6 +690,7 @@
       const isAlignedAtMiddle = Math.abs(potWorldPos.x) <= window.MAYALI.preset.centerThreshold;
 
       if (isAlignedAtMiddle) {
+        triggerControllerHaptics();
         window.registerPotHit();
       } else {
         if (Date.now() - lastHitTimestamp > 1000) {
