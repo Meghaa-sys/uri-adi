@@ -484,7 +484,7 @@
     padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #FFF;
   }
 
-  /* Celebratory Victory Header - Completely Transparent, Non-Obscuring Background */
+  /* Celebratory Victory Header - Completely Transparent Background */
   #winModal {
     position: fixed; inset: 0; z-index: 100; display: none; flex-direction: column;
     align-items: center; justify-content: space-between; padding: 24px 20px 36px 20px;
@@ -558,7 +558,7 @@
 
 <a-scene background="color: #160e08" vr-mode-ui="enabled: true">
   <a-assets>
-    <img id="sunAssetImg" src="sun_asset.jpg" />
+    <img id="sunAssetImg" src="sun_asset.png" />
   </a-assets>
 
   <a-sky color="#25152B"></a-sky>
@@ -603,9 +603,17 @@
     </a-entity>
   </a-entity>
 
-  <!-- Sun Asset inside pot that SLOWLY rises and reveals itself upon pot dropping to floor -->
-  <a-image id="sunAsset" src="#sunAssetImg" position="0 0.1 -2.2" width="1.75" height="1.75" visible="false"
-           material="transparent: true; alphaTest: 0.05"></a-image>
+  <!-- Terracotta Clay Shards entity that scatter on floor -->
+  <a-entity id="shards" visible="false" position="0 0.15 -2.2">
+    <a-cone id="shard1" position="-0.32 0.08 0.15" radius-bottom="0.22" height="0.28" color="#B5502F" rotation="65 15 45"></a-cone>
+    <a-cone id="shard2" position="0.38 0.05 -0.18" radius-bottom="0.19" height="0.24" color="#8f3f22" rotation="-40 80 -35"></a-cone>
+    <a-sphere id="shard3" position="-0.1 -0.05 -0.28" radius="0.14" color="#E8871E"></a-sphere>
+    <a-cone id="shard4" position="0.15 0.02 0.32" radius-bottom="0.16" height="0.20" color="#B5502F" rotation="70 -40 25"></a-cone>
+  </a-entity>
+
+  <!-- Sun Asset PNG (Transparent) that POPS UP from broken shards -->
+  <a-image id="sunAsset" src="#sunAssetImg" position="0 0.1 -2.2" width="1.85" height="1.85" visible="false"
+           material="transparent: true; alphaTest: 0.02"></a-image>
 
   <!-- 3D Flower Petals Burst Entity -->
   <a-entity id="flowerPetals" visible="false" position="0 0.4 -2.2">
@@ -676,6 +684,7 @@
   const potPivot = document.querySelector('#potPivot');
   const potTug = document.querySelector('#potTug');
   const potEntity = document.querySelector('#pot');
+  const shards = document.querySelector('#shards');
   const sunAsset = document.querySelector('#sunAsset');
   const flowerPetals = document.querySelector('#flowerPetals');
 
@@ -724,84 +733,99 @@
     stopSwingAnimations();
 
     if (success) {
-      // 1. Pot drops down to the floor
+      // 1. Pot drops to floor & shatters into pieces on impact
       if (potEntity) {
         potEntity.setAttribute('animation__drop', {
           property: 'position',
           to: '0 -2.6 0',
-          dur: 700,
+          dur: 450,
           easing: 'easeInQuad'
         });
       }
 
-      // 2. Smash sound upon hitting the floor, then Sun Asset & Flowers emerge slowly
+      // 2. Pot shatters on floor, pieces scatter outward
       setTimeout(() => {
         SoundFX.playSmash();
 
-        // 3. Sun Asset SLOWLY emerges from inside the pot (over 3.8 seconds) revealing itself like a magical artifact
-        if (sunAsset) {
-          sunAsset.setAttribute('visible', true);
-          sunAsset.setAttribute('position', '0 0.1 -2.2');
-          sunAsset.setAttribute('scale', '0.05 0.05 0.05');
-
-          sunAsset.setAttribute('animation__rise', {
-            property: 'position',
-            from: '0 0.1 -2.2',
-            to: '0 2.1 -2.2',
-            dur: 3800,
-            easing: 'easeOutQuad'
-          });
-
-          sunAsset.setAttribute('animation__scale', {
+        if (potEntity) potEntity.setAttribute('visible', false);
+        if (shards) {
+          shards.setAttribute('visible', true);
+          shards.setAttribute('position', '0 0.15 -2.2');
+          
+          shards.setAttribute('animation__scatter', {
             property: 'scale',
-            from: '0.05 0.05 0.05',
-            to: '1.45 1.45 1.45',
-            dur: 3800,
-            easing: 'easeOutQuad'
-          });
-
-          sunAsset.setAttribute('animation__pulse', {
-            property: 'rotation',
-            from: '0 0 -10',
-            to: '0 0 10',
-            dur: 1500,
-            dir: 'alternate',
-            loop: true,
-            easing: 'easeInOutSine'
+            from: '0.3 0.3 0.3',
+            to: '2.2 0.3 2.2',
+            dur: 500,
+            easing: 'easeOutExpo'
           });
         }
 
-        // 4. Flowers float upward slowly with the sun asset
-        if (flowerPetals) {
-          flowerPetals.setAttribute('visible', true);
-          flowerPetals.setAttribute('position', '0 0.4 -2.2');
+        // 3. AFTER pot breaks & scatters, Sun Asset POPS UP from the broken shards!
+        setTimeout(() => {
+          if (sunAsset) {
+            sunAsset.setAttribute('visible', true);
+            sunAsset.setAttribute('position', '0 0.1 -2.2');
+            sunAsset.setAttribute('scale', '0.1 0.1 0.1');
 
-          flowerPetals.setAttribute('animation__flowerRise', {
-            property: 'position',
-            from: '0 0.4 -2.2',
-            to: '0 2.1 -2.2',
-            dur: 4000,
-            easing: 'easeOutQuad'
-          });
+            sunAsset.setAttribute('animation__popup', {
+              property: 'scale',
+              from: '0.1 0.1 0.1',
+              to: '1.4 1.4 1.4',
+              dur: 850,
+              easing: 'easeOutBack'
+            });
 
-          flowerPetals.setAttribute('animation__burst', {
-            property: 'scale',
-            from: '0.2 0.2 0.2',
-            to: '3.2 3.2 3.2',
-            dur: 4000,
-            easing: 'easeOutQuad'
-          });
-        }
+            sunAsset.setAttribute('animation__rise', {
+              property: 'position',
+              from: '0 0.1 -2.2',
+              to: '0 2.2 -2.2',
+              dur: 1800,
+              easing: 'easeOutQuad'
+            });
 
-        // 5. Trigger Screen Confetti Popper & Victory Fanfare
-        triggerPartyPopper();
-        SoundFX.playVictoryFanfare();
+            sunAsset.setAttribute('animation__pulse', {
+              property: 'rotation',
+              from: '0 0 -8',
+              to: '0 0 8',
+              dur: 1400,
+              dir: 'alternate',
+              loop: true,
+              easing: 'easeInOutSine'
+            });
+          }
 
-        // 6. Display YOU WON Transparent Screen Header
-        document.getElementById('winModal').style.display = 'flex';
-        showMessage('🌸 DIVINE REVEAL — YOU WON! 🌸', 6000);
-        document.getElementById('hitCounterLabel').textContent = 'YOU WON! 🏆';
-      }, 650);
+          // 4. Flowers burst out alongside asset pop up
+          if (flowerPetals) {
+            flowerPetals.setAttribute('visible', true);
+            flowerPetals.setAttribute('position', '0 0.4 -2.2');
+
+            flowerPetals.setAttribute('animation__flowerRise', {
+              property: 'position',
+              from: '0 0.4 -2.2',
+              to: '0 2.2 -2.2',
+              dur: 2000,
+              easing: 'easeOutQuad'
+            });
+
+            flowerPetals.setAttribute('animation__burst', {
+              property: 'scale',
+              from: '0.2 0.2 0.2',
+              to: '3.0 3.0 3.0',
+              dur: 2000,
+              easing: 'easeOutQuad'
+            });
+          }
+
+          // 5. Confetti, Fanfare & Win Overlay
+          triggerPartyPopper();
+          SoundFX.playVictoryFanfare();
+          document.getElementById('winModal').style.display = 'flex';
+          showMessage('🌸 YOU WON! POO POTTICHU! 🌸', 6000);
+          document.getElementById('hitCounterLabel').textContent = 'YOU WON! 🏆';
+        }, 320);
+
+      }, 450);
     } else {
       showMessage("Time's up! The pot survived.", 3500);
     }
