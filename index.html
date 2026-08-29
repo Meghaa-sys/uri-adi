@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <title>MĀYĀLI — Real Uri Adi VR Festival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta name="description" content="Skill-based Uri Adi pot hitting simulation with keyboard spacebar/enter controls, eye-level pot swinging, desktop gaze raycasting, Quest 3 6DoF VR controller physics, ceramic cracking, and particle shatter victory!" />
+<meta name="description" content="Multi-strike Uri Adi pot hitting simulation with continuous keyboard/mouse/VR hitting, guaranteed 3-strike shatter, eye-level pot swinging, ceramic cracking, and particle victory!" />
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
 <script>
@@ -12,10 +12,9 @@
   window.MAYALI = {
     resolved: false,
     timerActive: false,
-    stickGrabbed: true,
     hitsRequired: 3,
     hitsCurrent: 0,
-    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.70 },
+    preset: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.15 },
     endChallenge: function () {}
   };
 
@@ -181,6 +180,7 @@
   };
 
   let lastHitTimestamp = 0;
+  let lastHitTimeDebounce = 0;
 
   function triggerControllerHaptics() {
     try {
@@ -200,7 +200,7 @@
       this.centerWorldPos = new THREE.Vector3();
       this.tipWorldPos = new THREE.Vector3();
       this.potWorldPos = new THREE.Vector3();
-      this.lastHitTime = 0;
+      this.lastVRHitTime = 0;
     },
     tick: function (time, delta) {
       const state = window.MAYALI;
@@ -220,20 +220,24 @@
       const distTip = this.tipWorldPos.distanceTo(this.potWorldPos);
       const minDist = Math.min(distCenter, distTip);
 
-      if (minDist < state.preset.hitRadius * 1.5 && (time - this.lastHitTime > 220)) {
-        this.lastHitTime = time;
+      if (minDist < state.preset.hitRadius && (time - this.lastVRHitTime > 200)) {
+        this.lastVRHitTime = time;
         triggerControllerHaptics();
         registerPotHit();
       }
     }
   });
 
-  // Global Multi-Hit Handler
+  // Robust Multi-Hit Handler with Reset Shake Animation
   function registerPotHit() {
     const state = window.MAYALI;
     if (state.resolved) return;
 
-    lastHitTimestamp = Date.now();
+    const now = Date.now();
+    if (now - lastHitTimeDebounce < 180) return; // Prevent double-trigger within 180ms
+    lastHitTimeDebounce = now;
+    lastHitTimestamp = now;
+
     state.hitsCurrent += 1;
     const potEntity = document.querySelector('#pot');
     const remaining = state.hitsRequired - state.hitsCurrent;
@@ -248,13 +252,23 @@
       }
 
       if (potEntity) {
+        // Clean temporary shake that restores clean state after 280ms
+        potEntity.removeAttribute('animation__hitshake');
         potEntity.setAttribute('animation__hitshake', {
           property: 'rotation',
-          to: '22 18 -22',
-          dur: 85,
+          from: '0 0 0',
+          to: '18 12 -18',
+          dur: 70,
           dir: 'alternate',
           loop: 2
         });
+
+        setTimeout(() => {
+          if (potEntity && !state.resolved) {
+            potEntity.removeAttribute('animation__hitshake');
+            potEntity.setAttribute('rotation', '0 0 0');
+          }
+        }, 280);
       }
 
       window.showMessage(`💥 HIT ${state.hitsCurrent}/${state.hitsRequired}! ${remaining} MORE TO BREAK!`, 1400);
@@ -403,10 +417,6 @@
   <a-box class="frame" position="1.25 1.8 -2.2" width="0.15" height="3.6" depth="0.15" color="#422916"></a-box>
   <a-box class="frame" position="0 3.6 -2.2" width="2.65" height="0.15" depth="0.15" color="#422916"></a-box>
 
-  <a-cone position="-0.7 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#2F5233" rotation="180 0 0"></a-cone>
-  <a-cone position="0.7 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#2F5233" rotation="180 0 0"></a-cone>
-  <a-cone position="0 3.35 -2.2" radius-bottom="0.08" height="0.3" color="#E8871E" rotation="180 0 0"></a-cone>
-
   <!-- Eye-Level 3D Automatic Swinging Outer Pivot -->
   <a-entity id="potPivot" position="0 3.2 -2.2"
             animation__swing="property: rotation; from: 0 0 -34; to: 0 0 34; dir: alternate; loop: true; dur: 2200; easing: easeInOutSine">
@@ -478,9 +488,9 @@
   const explicitTimeLimit = params.get('timeLimit');
 
   const DIFFICULTY_PRESETS = {
-    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 0.85 },
-    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 0.70 },
-    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.50 }
+    easy:   { timeLimit: 35, swingSpeed: 1.6, swingAmplitude: 24, hitRadius: 1.25 },
+    medium: { timeLimit: 30, swingSpeed: 2.2, swingAmplitude: 34, hitRadius: 1.15 },
+    hard:   { timeLimit: 18, swingSpeed: 3.2, swingAmplitude: 45, hitRadius: 0.90 }
   };
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
   if (explicitTimeLimit) preset.timeLimit = parseFloat(explicitTimeLimit);
@@ -590,7 +600,6 @@
     }
   });
 
-  // UNIFIED STRIKE ACTION (CLICK, TOUCH, OR KEYBOARD PRESS)
   function performStrike() {
     if (window.MAYALI.resolved || !window.MAYALI.timerActive) return;
     SoundFX.playSwing();
@@ -622,7 +631,7 @@
       const cursorEl = document.querySelector('#mainCursor');
       const raycaster = cursorEl ? cursorEl.components.raycaster : null;
       const intersectedEls = raycaster ? raycaster.intersectedEls : [];
-      const gazeHit = intersectedEls.some(el => el.id === 'pot' || (el.parentElement && el.parentElement.id === 'pot'));
+      const gazeHit = intersectedEls.some(el => el.id === 'pot' || (el.closest && el.closest('#pot')));
 
       const isHit = gazeHit || (minDist < window.MAYALI.preset.hitRadius);
 
@@ -636,12 +645,9 @@
     }, 110);
   }
 
-  // Mouse & Touch Screen Click
   document.querySelector('a-scene').addEventListener('click', performStrike);
 
-  // Keyboard Event Listener (Spacebar, Enter, X, F, ArrowUp)
   window.addEventListener('keydown', (e) => {
-    // Prevent triggering if overlay start modal is open
     if (!window.MAYALI.timerActive || window.MAYALI.resolved) return;
 
     if (
